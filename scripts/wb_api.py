@@ -19,7 +19,21 @@ ROOT = Path(__file__).resolve().parents[1]
 SWAGGER_DIR = ROOT / "swagger"
 GENERATED_DIR = ROOT / "generated"
 METHODS = {"get", "post", "put", "patch", "delete", "options", "head", "trace"}
-GENERATED = "Generated from `swagger/*.yaml` by `scripts/wb_api.py generate`. Do not edit by hand; Swagger is the source of truth."
+SUPPORTED_LANGS = ("ru", "en")
+LANG_DIRS = {"ru": SWAGGER_DIR, "en": SWAGGER_DIR / "en"}
+LANG_LABELS = {"ru": "Russian", "en": "English"}
+
+
+def swagger_source(lang: str) -> str:
+    return "swagger/*.yaml" if lang == "ru" else f"swagger/{lang}/*.yaml"
+
+
+def generated_note(lang: str) -> str:
+    if lang == "ru":
+        source = "`swagger/*.yaml`"
+    else:
+        source = "`swagger/*.yaml` with text from `swagger/en/*.yaml`"
+    return f"Generated from {source} by `scripts/wb_api.py generate`. Do not edit by hand; Russian Swagger is the canonical source of truth."
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -30,11 +44,14 @@ def load_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
-def load_specs() -> list[dict[str, Any]]:
+def load_specs(lang: str = "ru") -> list[dict[str, Any]]:
+    if lang not in LANG_DIRS:
+        raise ValueError(f"Unsupported language: {lang}")
     specs: list[dict[str, Any]] = []
-    for path in sorted(SWAGGER_DIR.glob("*.yaml")):
+    for path in sorted(LANG_DIRS[lang].glob("*.yaml")):
         spec = load_yaml(path)
         spec["_path"] = path
+        spec["_lang"] = lang
         specs.append(spec)
     return specs
 
@@ -110,6 +127,7 @@ def iter_operations(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     {
                         "file": spec["_path"],
                         "file_rel": rel(spec["_path"]),
+                        "lang": str(spec.get("_lang") or "ru"),
                         "slug": file_slug(spec),
                         "title": title(spec),
                         "method": method.upper(),
@@ -132,6 +150,54 @@ def iter_operations(specs: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     }
                 )
     return records
+
+
+def operation_key(record: dict[str, Any]) -> tuple[str, str]:
+    return (record["method"], record["path"])
+
+
+def file_operation_key(record: dict[str, Any]) -> tuple[str, str, str]:
+    return (Path(record["file"]).name, record["method"], record["path"])
+
+
+def records_for_lang(lang: str) -> list[dict[str, Any]]:
+    return iter_operations(load_specs(lang))
+
+
+def records_with_search_overlays(lang: str) -> list[dict[str, Any]]:
+    records = records_for_lang(lang)
+    overlay_maps: list[dict[tuple[str, str], dict[str, Any]]] = []
+    for overlay_lang in SUPPORTED_LANGS:
+        if overlay_lang == lang or not LANG_DIRS[overlay_lang].exists():
+            continue
+        overlay_records = records_for_lang(overlay_lang)
+        if overlay_records:
+            overlay_maps.append({operation_key(record): record for record in overlay_records})
+    for record in records:
+        record["search_overlays"] = [
+            overlay[operation_key(record)] for overlay in overlay_maps if operation_key(record) in overlay
+        ]
+    return records
+
+
+def canonical_records_with_overlays() -> list[dict[str, Any]]:
+    return records_with_search_overlays("ru")
+
+
+def overlay_for_lang(record: dict[str, Any], lang: str) -> dict[str, Any] | None:
+    if record.get("lang") == lang:
+        return record
+    for overlay in record.get("search_overlays", []):
+        if overlay.get("lang") == lang:
+            return overlay
+    return None
+
+
+def localized(record: dict[str, Any], key: str, lang: str) -> Any:
+    overlay = overlay_for_lang(record, lang)
+    if overlay and overlay.get(key):
+        return overlay[key]
+    return record.get(key)
 
 
 def compact(value: Any, limit: int = 180) -> str:
@@ -157,7 +223,7 @@ def tokens(value: Any) -> list[str]:
 
 
 def search_fields(record: dict[str, Any]) -> list[str]:
-    return [
+    fields = [
         record["method"],
         record["path"],
         record["summary"],
@@ -170,6 +236,20 @@ def search_fields(record: dict[str, Any]) -> list[str]:
         " ".join(record["servers"]),
         record["file_rel"],
     ]
+    for overlay in record.get("search_overlays", []):
+        fields.extend(
+            [
+                overlay["summary"],
+                overlay["description"],
+                overlay["operation_id"],
+                overlay["tag"],
+                " ".join(overlay["tags"]),
+                overlay["title"],
+                overlay["category"],
+                overlay["file_rel"],
+            ]
+        )
+    return fields
 
 
 def score_record(record: dict[str, Any], query: str) -> int:
@@ -217,13 +297,20 @@ def ranked_records(records: list[dict[str, Any]], query: str) -> list[dict[str, 
     ]
 
 
+def tag_matches(record: dict[str, Any], needle: str) -> bool:
+    haystacks = [record["tag"], " ".join(record["tags"])]
+    for overlay in record.get("search_overlays", []):
+        haystacks.extend([overlay["tag"], " ".join(overlay["tags"])])
+    return any(needle == normalize_text(value) or needle in normalize_text(value) for value in haystacks)
+
+
 def md_cell(value: Any) -> str:
     text = ", ".join(str(item) for item in value) if isinstance(value, list) else str(value or "")
     text = re.sub(r"\s+", " ", text).strip()
     return text.replace("|", r"\|")
 
 
-def endpoint_table(records: list[dict[str, Any]], include_file: bool = False) -> list[str]:
+def endpoint_table(records: list[dict[str, Any]], include_file: bool = False, lang: str = "ru") -> list[str]:
     if include_file:
         lines = ["| File | Tag | Method | Path | Hosts | Summary | Operation ID |", "|---|---|---|---|---|---|---|"]
     else:
@@ -231,7 +318,7 @@ def endpoint_table(records: list[dict[str, Any]], include_file: bool = False) ->
     for record in records:
         hosts = [url.replace("https://", "") for url in record["servers"]]
         row = [
-            md_cell(record["tag"]),
+            md_cell(localized(record, "tag", lang)),
             f"`{record['method']}`",
             f"`{md_cell(record['path'])}`",
             md_cell(hosts),
@@ -240,7 +327,7 @@ def endpoint_table(records: list[dict[str, Any]], include_file: bool = False) ->
             row.insert(0, md_cell(record["file_rel"]))
         else:
             row.append(md_cell(record["category"]))
-        row.extend([md_cell(record["summary"]), f"`{md_cell(record['operation_id'])}`" if record["operation_id"] else ""])
+        row.extend([md_cell(localized(record, "summary", lang)), f"`{md_cell(record['operation_id'])}`" if record["operation_id"] else ""])
         lines.append("| " + " | ".join(row) + " |")
     return lines
 
@@ -275,9 +362,22 @@ def schema_summary(spec: dict[str, Any], schema: Any, seen: set[str] | None = No
     return " ".join(pieces) or "object"
 
 
-def parameter_lines(record: dict[str, Any]) -> list[str]:
+def overlay_parameter_descriptions(record: dict[str, Any], lang: str) -> dict[tuple[str, str], str]:
+    overlay = overlay_for_lang(record, lang)
+    if not overlay or overlay is record:
+        return {}
+    descriptions: dict[tuple[str, str], str] = {}
+    for raw_param in overlay["parameters"]:
+        param = resolve_ref(overlay["spec"], raw_param)
+        if isinstance(param, dict):
+            descriptions[(str(param.get("name", "")), str(param.get("in", "")))] = compact(param.get("description"), 140)
+    return descriptions
+
+
+def parameter_lines(record: dict[str, Any], lang: str = "ru") -> list[str]:
     spec = record["spec"]
     lines: list[str] = []
+    localized_descriptions = overlay_parameter_descriptions(record, lang)
     for raw_param in record["parameters"]:
         param = resolve_ref(spec, raw_param)
         if not isinstance(param, dict):
@@ -291,7 +391,7 @@ def parameter_lines(record: dict[str, Any]) -> list[str]:
         summary = schema_summary(spec, schema)
         if summary:
             bits.append(f"schema={summary}")
-        desc = compact(param.get("description"), 140)
+        desc = localized_descriptions.get((str(param.get("name", "")), str(param.get("in", "")))) or compact(param.get("description"), 140)
         if desc:
             bits.append(f"- {desc}")
         lines.append("- " + " ".join(bits))
@@ -313,7 +413,15 @@ def request_body_media(record: dict[str, Any]) -> list[tuple[str, Any]]:
     return result
 
 
-def request_body_lines(record: dict[str, Any]) -> list[str]:
+def overlay_request_body_description(record: dict[str, Any], lang: str) -> str:
+    overlay = overlay_for_lang(record, lang)
+    if not overlay or overlay is record:
+        return ""
+    body = resolve_ref(overlay["spec"], overlay.get("request_body"))
+    return compact(body.get("description"), 200) if isinstance(body, dict) else ""
+
+
+def request_body_lines(record: dict[str, Any], lang: str = "ru") -> list[str]:
     spec = record["spec"]
     body = resolve_ref(spec, record.get("request_body"))
     if not isinstance(body, dict):
@@ -321,7 +429,7 @@ def request_body_lines(record: dict[str, Any]) -> list[str]:
     lines = [f"- required={str(bool(body.get('required', False))).lower()}"]
     for media_type, schema in request_body_media(record):
         lines.append(f"- `{media_type}` schema={schema_summary(spec, schema)}")
-    desc = compact(body.get("description"), 200)
+    desc = overlay_request_body_description(record, lang) or compact(body.get("description"), 200)
     if desc:
         lines.append(f"- {desc}")
     return lines
@@ -348,13 +456,21 @@ def response_items(record: dict[str, Any]) -> list[tuple[str, str, Any, str]]:
     return items
 
 
-def response_lines(record: dict[str, Any]) -> list[str]:
+def overlay_response_descriptions(record: dict[str, Any], lang: str) -> dict[tuple[str, str], str]:
+    overlay = overlay_for_lang(record, lang)
+    if not overlay or overlay is record:
+        return {}
+    return {(code, media_type): desc for code, media_type, _, desc in response_items(overlay) if desc}
+
+
+def response_lines(record: dict[str, Any], lang: str = "ru") -> list[str]:
     spec = record["spec"]
     lines: list[str] = []
     grouped: dict[str, list[str]] = defaultdict(list)
     desc_by_code: dict[str, str] = {}
+    localized_descriptions = overlay_response_descriptions(record, lang)
     for code, media_type, schema, desc in response_items(record):
-        desc_by_code[code] = desc
+        desc_by_code[code] = localized_descriptions.get((code, media_type)) or localized_descriptions.get((code, "")) or desc
         if media_type:
             summary = schema_summary(spec, schema)
             grouped[code].append(f"{media_type}:{summary}" if summary else media_type)
@@ -480,11 +596,11 @@ def schema_lines(
     return lines
 
 
-def generate_endpoint_index(specs: list[dict[str, Any]], records: list[dict[str, Any]]) -> str:
+def generate_endpoint_index(specs: list[dict[str, Any]], records: list[dict[str, Any]], lang: str) -> str:
     lines = [
         "# Wildberries API - Generated Endpoint Index",
         "",
-        GENERATED,
+        generated_note(lang),
         "",
         f"Endpoint count: **{len(records)}** across **{len(specs)}** Swagger files.",
         "",
@@ -495,20 +611,23 @@ def generate_endpoint_index(specs: list[dict[str, Any]], records: list[dict[str,
     for record in records:
         by_file[record["file"]].append(record)
     for spec in specs:
-        lines.extend([f"## {title(spec)} ({rel(spec['_path'])})", ""])
-        lines.extend(endpoint_table(by_file.get(spec["_path"], [])))
+        file_records = by_file.get(spec["_path"], [])
+        display_title = localized(file_records[0], "title", lang) if file_records else title(spec)
+        lines.extend([f"## {display_title} ({rel(spec['_path'])})", ""])
+        lines.extend(endpoint_table(file_records, lang=lang))
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
 
-def generate_reference(spec: dict[str, Any], records: list[dict[str, Any]]) -> str:
+def generate_reference(spec: dict[str, Any], records: list[dict[str, Any]], lang: str) -> str:
     hosts = sorted({host.replace("https://", "") for record in records for host in record["servers"]})
     categories = sorted({record["category"] for record in records if record["category"]})
     tags = sorted({record["tag"] for record in records if record["tag"]})
+    display_title = localized(records[0], "title", lang) if records else title(spec)
     lines = [
-        f"# {title(spec)}",
+        f"# {display_title}",
         "",
-        GENERATED,
+        generated_note(lang),
         "",
         f"Source: `{rel(spec['_path'])}`.",
         "",
@@ -521,15 +640,15 @@ def generate_reference(spec: dict[str, Any], records: list[dict[str, Any]]) -> s
     ]
     by_tag: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for record in records:
-        by_tag[record["tag"] or "Untagged"].append(record)
+        by_tag[localized(record, "tag", lang) or "Untagged"].append(record)
     for tag_name in sorted(by_tag):
         lines.extend([f"## {tag_name}", ""])
-        lines.extend(endpoint_table(by_tag[tag_name]))
+        lines.extend(endpoint_table(by_tag[tag_name], lang=lang))
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
 
-def generate_protocol(records: list[dict[str, Any]], specs: list[dict[str, Any]]) -> str:
+def generate_protocol(records: list[dict[str, Any]], specs: list[dict[str, Any]], lang: str) -> str:
     scheme_rows: list[str] = []
     seen_schemes: set[tuple[str, str, str, str, str]] = set()
     for spec in specs:
@@ -567,7 +686,7 @@ def generate_protocol(records: list[dict[str, Any]], specs: list[dict[str, Any]]
     lines = [
         "# Wildberries API - Protocol Summary",
         "",
-        "Derived live from `swagger/*.yaml`; Swagger is the source of truth.",
+        "Derived live from `swagger/*.yaml`; Russian Swagger is the canonical source of truth.",
         "",
         "## Security Schemes",
         "",
@@ -592,7 +711,7 @@ def generate_protocol(records: list[dict[str, Any]], specs: list[dict[str, Any]]
 
     ping_records = [record for record in records if record["path"] == "/ping"]
     lines.extend(["", "## Ping Operations", ""])
-    lines.extend(endpoint_table(ping_records, include_file=True) if ping_records else ["No `/ping` operation is declared."])
+    lines.extend(endpoint_table(ping_records, include_file=True, lang=lang) if ping_records else ["No `/ping` operation is declared."])
 
     lines.extend(["", "## Response Status Codes Observed", "", "| Code | Operation count | Example descriptions |", "|---|---|---|"])
     for code in sorted(status_codes, key=lambda item: (not item.isdigit(), item)):
@@ -601,21 +720,22 @@ def generate_protocol(records: list[dict[str, Any]], specs: list[dict[str, Any]]
     return "\n".join(lines).rstrip() + "\n"
 
 
-def command_map(_: argparse.Namespace) -> int:
-    specs = load_specs()
-    records = iter_operations(specs)
+def command_map(args: argparse.Namespace) -> int:
+    specs = load_specs("ru")
+    records = canonical_records_with_overlays()
     by_file: dict[Path, list[dict[str, Any]]] = defaultdict(list)
     for record in records:
         by_file[record["file"]].append(record)
     print("Wildberries API map")
-    print(f"Source: swagger/*.yaml ({len(records)} endpoints, {len(specs)} files)")
+    print(f"Source: {swagger_source('ru')} canonical + swagger/en/*.yaml search overlay ({LANG_LABELS[args.lang]} output, {len(records)} endpoints, {len(specs)} files)")
     for spec in specs:
         file_records = by_file[spec["_path"]]
         hosts = sorted({host.replace("https://", "") for record in file_records for host in record["servers"]})
         categories = sorted({record["category"] for record in file_records if record["category"]})
-        tag_counts = Counter(record["tag"] or "Untagged" for record in file_records)
+        tag_counts = Counter(localized(record, "tag", args.lang) or "Untagged" for record in file_records)
+        display_title = localized(file_records[0], "title", args.lang) if file_records else title(spec)
         print()
-        print(f"{title(spec)} ({len(file_records)}) - {rel(spec['_path'])}")
+        print(f"{display_title} ({len(file_records)}) - {rel(spec['_path'])}")
         if hosts:
             print(f"  hosts: {', '.join(hosts)}")
         if categories:
@@ -626,12 +746,12 @@ def command_map(_: argparse.Namespace) -> int:
 
 
 def command_generate(args: argparse.Namespace) -> int:
-    specs = load_specs()
-    records = iter_operations(specs)
+    specs = load_specs("ru")
+    records = canonical_records_with_overlays()
     output_dir = (ROOT / args.output).resolve() if not Path(args.output).is_absolute() else Path(args.output)
     references_dir = output_dir / "references"
     references_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / "endpoints-index.md").write_text(generate_endpoint_index(specs, records), encoding="utf-8")
+    (output_dir / "endpoints-index.md").write_text(generate_endpoint_index(specs, records, args.lang), encoding="utf-8")
     by_file: dict[Path, list[dict[str, Any]]] = defaultdict(list)
     for record in records:
         by_file[record["file"]].append(record)
@@ -639,10 +759,10 @@ def command_generate(args: argparse.Namespace) -> int:
     for spec in specs:
         output = references_dir / f"{file_slug(spec)}.md"
         expected.add(output)
-        output.write_text(generate_reference(spec, by_file[spec["_path"]]), encoding="utf-8")
+        output.write_text(generate_reference(spec, by_file[spec["_path"]], args.lang), encoding="utf-8")
     protocol = references_dir / "protocol.md"
     expected.add(protocol)
-    protocol.write_text(generate_protocol(records, specs), encoding="utf-8")
+    protocol.write_text(generate_protocol(records, specs, args.lang), encoding="utf-8")
     for stale in references_dir.glob("*.md"):
         if stale not in expected:
             stale.unlink()
@@ -651,11 +771,11 @@ def command_generate(args: argparse.Namespace) -> int:
 
 
 def command_search(args: argparse.Namespace) -> int:
-    records = ranked_records(iter_operations(load_specs()), args.query)[: args.limit]
+    records = ranked_records(canonical_records_with_overlays(), args.query)[: args.limit]
     if not records:
         print("No matching endpoints found.")
         return 1
-    print("\n".join(endpoint_table(records, include_file=True)))
+    print("\n".join(endpoint_table(records, include_file=True, lang=args.lang)))
     return 0
 
 
@@ -663,13 +783,13 @@ def command_tag(args: argparse.Namespace) -> int:
     needle = normalize_text(args.tag)
     records = [
         record
-        for record in iter_operations(load_specs())
-        if needle == normalize_text(record["tag"]) or needle in normalize_text(record["tag"])
+        for record in canonical_records_with_overlays()
+        if tag_matches(record, needle)
     ][: args.limit]
     if not records:
         print(f"No endpoints found for tag: {args.tag}")
         return 1
-    print("\n".join(endpoint_table(records, include_file=True)))
+    print("\n".join(endpoint_table(records, include_file=True, lang=args.lang)))
     return 0
 
 
@@ -683,7 +803,7 @@ def select_detail_records(args: argparse.Namespace, records: list[dict[str, Any]
 
 
 def command_detail(args: argparse.Namespace) -> int:
-    matches_found = select_detail_records(args, iter_operations(load_specs()))
+    matches_found = select_detail_records(args, canonical_records_with_overlays())
     if not matches_found:
         target = args.operation_id or f"{args.method.upper()} {args.path}"
         print(f"No exact endpoint found for {target}.")
@@ -694,26 +814,30 @@ def command_detail(args: argparse.Namespace) -> int:
         print(f"# {record['method']} {record['path']}")
         print()
         print(f"Source: `{record['file_rel']}`")
-        print(f"Title: {record['title']}")
-        print(f"Summary: {record['summary']}")
+        overlay = overlay_for_lang(record, args.lang)
+        if overlay and overlay is not record:
+            print(f"{LANG_LABELS[args.lang]} text overlay: `{overlay['file_rel']}`")
+        print(f"Title: {localized(record, 'title', args.lang)}")
+        print(f"Summary: {localized(record, 'summary', args.lang)}")
         if record["operation_id"]:
             print(f"Operation ID: `{record['operation_id']}`")
-        print(f"Tags: {', '.join(record['tags']) if record['tags'] else 'none'}")
+        display_tags = localized(record, "tags", args.lang)
+        print(f"Tags: {', '.join(display_tags) if display_tags else 'none'}")
         print(f"Hosts: {', '.join(record['servers']) if record['servers'] else 'none declared'}")
         print(f"x-category: `{record['category']}`" if record["category"] else "x-category: none")
         if record["token_types"]:
             print(f"x-token-types: {', '.join(record['token_types'])}")
         print(f"Security: {', '.join(record['security']) if record['security'] else 'none declared'}")
         print(f"Readonly: {str(record['readonly']).lower()}")
-        params = parameter_lines(record)
+        params = parameter_lines(record, args.lang)
         print("\n## Parameters")
         print("\n".join(params) if params else "None.")
-        body = request_body_lines(record)
+        body = request_body_lines(record, args.lang)
         print("\n## Request Body")
         print("\n".join(body) if body else "None.")
         print("\n## Responses")
-        print("\n".join(response_lines(record)) or "None declared.")
-        description = compact(record["description"], 900)
+        print("\n".join(response_lines(record, args.lang)) or "None declared.")
+        description = compact(localized(record, "description", args.lang), 900)
         if description:
             print("\n## Description Excerpt")
             print(description)
@@ -744,8 +868,8 @@ def print_schema_details(record: dict[str, Any], max_depth: int) -> None:
         print("\n".join(lines) if lines else "- no fields")
 
 
-def command_hosts(_: argparse.Namespace) -> int:
-    records = iter_operations(load_specs())
+def command_hosts(args: argparse.Namespace) -> int:
+    records = canonical_records_with_overlays()
     hosts: dict[str, set[str]] = defaultdict(set)
     for record in records:
         for host in record["servers"]:
@@ -756,9 +880,9 @@ def command_hosts(_: argparse.Namespace) -> int:
     return 0
 
 
-def command_protocol(_: argparse.Namespace) -> int:
-    specs = load_specs()
-    print(generate_protocol(iter_operations(specs), specs))
+def command_protocol(args: argparse.Namespace) -> int:
+    specs = load_specs("ru")
+    print(generate_protocol(canonical_records_with_overlays(), specs, args.lang))
     return 0
 
 
@@ -776,30 +900,112 @@ def collect_refs(node: Any) -> list[str]:
     return refs
 
 
-def generated_expected(output_dir: Path, specs: list[dict[str, Any]], records: list[dict[str, Any]]) -> dict[Path, str]:
+def generated_expected(output_dir: Path, specs: list[dict[str, Any]], records: list[dict[str, Any]], lang: str) -> dict[Path, str]:
     by_file: dict[Path, list[dict[str, Any]]] = defaultdict(list)
     for record in records:
         by_file[record["file"]].append(record)
-    expected = {output_dir / "endpoints-index.md": generate_endpoint_index(specs, records)}
+    expected = {output_dir / "endpoints-index.md": generate_endpoint_index(specs, records, lang)}
     references_dir = output_dir / "references"
-    expected[references_dir / "protocol.md"] = generate_protocol(records, specs)
+    expected[references_dir / "protocol.md"] = generate_protocol(records, specs, lang)
     for spec in specs:
-        expected[references_dir / f"{file_slug(spec)}.md"] = generate_reference(spec, by_file[spec["_path"]])
+        expected[references_dir / f"{file_slug(spec)}.md"] = generate_reference(spec, by_file[spec["_path"]], lang)
     return expected
 
 
-def command_validate(args: argparse.Namespace) -> int:
-    specs = load_specs()
-    records = iter_operations(specs)
-    print(f"Parsed {len(records)} endpoints from {len(specs)} Swagger files.")
+def parameter_signature(record: dict[str, Any]) -> tuple[tuple[str, str, bool, Any], ...]:
+    spec = record["spec"]
+    signature: list[tuple[str, str, bool, Any]] = []
+    for raw_param in record["parameters"]:
+        param = resolve_ref(spec, raw_param)
+        if not isinstance(param, dict):
+            continue
+        schema = resolve_ref(spec, param.get("schema"))
+        signature.append(
+            (
+                str(param.get("name", "")),
+                str(param.get("in", "")),
+                bool(param.get("required", False)),
+                schema_shape(spec, schema),
+            )
+        )
+    return tuple(signature)
+
+
+def request_signature(record: dict[str, Any]) -> tuple[bool, tuple[tuple[str, Any], ...]]:
+    spec = record["spec"]
+    body = resolve_ref(spec, record.get("request_body"))
+    required = bool(body.get("required", False)) if isinstance(body, dict) else False
+    media = tuple((media_type, schema_shape(spec, schema)) for media_type, schema in request_body_media(record))
+    return required, media
+
+
+def response_signature(record: dict[str, Any]) -> tuple[tuple[str, str, Any], ...]:
+    spec = record["spec"]
+    return tuple((code, media_type, schema_shape(spec, schema)) for code, media_type, schema, _ in response_items(record))
+
+
+def schema_shape(spec: dict[str, Any], schema: Any, seen: set[str] | None = None, depth: int = 0) -> Any:
+    if seen is None:
+        seen = set()
+    if not isinstance(schema, dict):
+        return None
+    if "$ref" in schema:
+        ref = str(schema["$ref"])
+        if ref in seen:
+            return ("recursive",)
+        resolved = resolve_pointer(spec, ref)
+        return schema_shape(spec, resolved, seen | {ref}, depth) if isinstance(resolved, dict) else ("unresolved", ref)
+    if depth >= 8:
+        return ("max-depth", schema.get("type", "object"))
+
+    pieces: list[Any] = []
+    for key in ("type", "format", "nullable", "minimum", "maximum", "minLength", "maxLength", "pattern"):
+        if key in schema:
+            pieces.append((key, schema[key]))
+    if "enum" in schema:
+        pieces.append(("enum", tuple(schema.get("enum") or [])))
+    if "required" in schema:
+        pieces.append(("required", tuple(sorted(schema.get("required") or []))))
+    for key in ("allOf", "oneOf", "anyOf"):
+        if isinstance(schema.get(key), list):
+            pieces.append((key, tuple(schema_shape(spec, item, seen, depth + 1) for item in schema[key])))
+    if "items" in schema:
+        pieces.append(("items", schema_shape(spec, schema.get("items"), seen, depth + 1)))
+    properties = schema.get("properties")
+    if isinstance(properties, dict):
+        pieces.append(
+            (
+                "properties",
+                tuple((name, schema_shape(spec, value, seen, depth + 1)) for name, value in sorted(properties.items())),
+            )
+        )
+    additional = schema.get("additionalProperties")
+    if isinstance(additional, dict):
+        pieces.append(("additionalProperties", schema_shape(spec, additional, seen, depth + 1)))
+    return tuple(pieces)
+
+
+def structural_signature(record: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "operationId": record["operation_id"],
+        "servers": tuple(sorted(record["servers"])),
+        "security": tuple(sorted(record["security"])),
+        "x-token-types": tuple(sorted(record["token_types"])),
+        "readonly": record["readonly"],
+        "parameters": parameter_signature(record),
+        "request": request_signature(record),
+        "responses": response_signature(record),
+    }
+
+
+def validate_spec_set(lang: str, specs: list[dict[str, Any]], records: list[dict[str, Any]]) -> list[str]:
+    errors: list[str] = []
     duplicates = [
         item for item, count in Counter((record["method"], record["path"]) for record in records).items() if count > 1
     ]
     if duplicates:
-        print("Duplicate method/path pairs:")
         for method, path in duplicates:
-            print(f"- {method} {path}")
-        return 1
+            errors.append(f"{lang}: duplicate method/path pair {method} {path}")
 
     unresolved: list[tuple[str, str]] = []
     for spec in specs:
@@ -807,27 +1013,88 @@ def command_validate(args: argparse.Namespace) -> int:
             if ref.startswith("#/") and resolve_pointer(spec, ref) is None:
                 unresolved.append((rel(spec["_path"]), ref))
     if unresolved:
-        print("Unresolved local $ref values:")
         for file_rel, ref in unresolved[:50]:
-            print(f"- {file_rel}: {ref}")
+            errors.append(f"{lang}: unresolved local $ref {file_rel}: {ref}")
         if len(unresolved) > 50:
-            print(f"... {len(unresolved) - 50} more")
-        return 1
+            errors.append(f"{lang}: ... {len(unresolved) - 50} more unresolved refs")
 
     missing_titles = [rel(spec["_path"]) for spec in specs if not title(spec)]
     missing_tags = [f"{record['method']} {record['path']}" for record in records if not record["tag"]]
-    if missing_titles or missing_tags:
-        if missing_titles:
-            print("Swagger files missing info.title:")
-            print("\n".join(f"- {item}" for item in missing_titles))
-        if missing_tags:
-            print("Operations missing tags:")
-            print("\n".join(f"- {item}" for item in missing_tags[:50]))
+    for item in missing_titles:
+        errors.append(f"{lang}: missing info.title in {item}")
+    for item in missing_tags[:50]:
+        errors.append(f"{lang}: operation missing tags {item}")
+    if len(missing_tags) > 50:
+        errors.append(f"{lang}: ... {len(missing_tags) - 50} more operations missing tags")
+    return errors
+
+
+def validate_bilingual_mirror(ru_specs: list[dict[str, Any]], ru_records: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    en_specs = load_specs("en")
+    en_records = iter_operations(en_specs)
+    print(f"Parsed {len(en_records)} English-overlay endpoints from {len(en_specs)} Swagger files.")
+
+    ru_files = {Path(spec["_path"]).name for spec in ru_specs}
+    en_files = {Path(spec["_path"]).name for spec in en_specs}
+    for filename in sorted(ru_files - en_files):
+        errors.append(f"en: missing mirror file swagger/en/{filename}")
+    for filename in sorted(en_files - ru_files):
+        errors.append(f"en: extra mirror file swagger/en/{filename}")
+
+    ru_map = {file_operation_key(record): record for record in ru_records}
+    en_map = {file_operation_key(record): record for record in en_records}
+    for key in sorted(set(ru_map) - set(en_map)):
+        filename, method, path = key
+        errors.append(f"en: missing mirror operation {filename} {method} {path}")
+    for key in sorted(set(en_map) - set(ru_map)):
+        filename, method, path = key
+        errors.append(f"en: extra mirror operation {filename} {method} {path}")
+
+    for key in sorted(set(ru_map) & set(en_map)):
+        ru_signature = structural_signature(ru_map[key])
+        en_signature = structural_signature(en_map[key])
+        for field in sorted(ru_signature):
+            if ru_signature[field] != en_signature[field]:
+                filename, method, path = key
+                warnings.append(f"en: structural drift in {filename} {method} {path}: {field}")
+    return errors, warnings
+
+
+def command_validate(args: argparse.Namespace) -> int:
+    specs = load_specs("ru")
+    records = iter_operations(specs)
+    print(f"Parsed {len(records)} canonical Russian endpoints from {len(specs)} Swagger files.")
+    errors = validate_spec_set("ru", specs, records)
+    warnings: list[str] = []
+    if LANG_DIRS["en"].exists():
+        en_specs = load_specs("en")
+        en_records = iter_operations(en_specs)
+        errors.extend(validate_spec_set("en", en_specs, en_records))
+        mirror_errors, mirror_warnings = validate_bilingual_mirror(specs, records)
+        errors.extend(mirror_errors)
+        warnings.extend(mirror_warnings)
+    if errors:
+        print("Swagger validation failed:")
+        for error in errors[:100]:
+            print(f"- {error}")
+        if len(errors) > 100:
+            print(f"... {len(errors) - 100} more")
         return 1
+    if warnings:
+        print("English overlay structural warnings:")
+        for warning in warnings[:100]:
+            print(f"- {warning}")
+        if len(warnings) > 100:
+            print(f"... {len(warnings) - 100} more")
+        print("Russian Swagger remains canonical for schemas, parameters, request bodies, and responses.")
 
     if args.generated:
+        generated_specs = load_specs("ru")
+        generated_records = canonical_records_with_overlays()
         output_dir = (ROOT / args.output).resolve() if not Path(args.output).is_absolute() else Path(args.output)
-        expected = generated_expected(output_dir, specs, records)
+        expected = generated_expected(output_dir, generated_specs, generated_records, args.lang)
         missing = [path for path in expected if not path.exists()]
         stale = [path for path, content in expected.items() if path.exists() and path.read_text(encoding="utf-8") != content]
         extra = sorted((output_dir / "references").glob("*.md")) if (output_dir / "references").exists() else []
@@ -840,7 +1107,7 @@ def command_validate(args: argparse.Namespace) -> int:
             return 1
         print("Generated reference files match Swagger.")
 
-    print("Swagger references are valid.")
+    print("Swagger references and bilingual mirror are valid.")
     return 0
 
 
@@ -851,6 +1118,7 @@ def build_parser() -> argparse.ArgumentParser:
     search = subparsers.add_parser("search", help="Ranked search over paths, summaries, tags, descriptions, operation IDs, hosts, and files")
     search.add_argument("query")
     search.add_argument("--limit", type=int, default=25)
+    search.add_argument("--lang", choices=SUPPORTED_LANGS, default="ru", help="Output language; search indexes both Russian and English")
     search.set_defaults(func=command_search)
 
     detail = subparsers.add_parser("detail", help="Print compact details for an exact endpoint")
@@ -859,29 +1127,36 @@ def build_parser() -> argparse.ArgumentParser:
     detail.add_argument("--operation-id")
     detail.add_argument("--schemas", action="store_true", help="Expand request and primary response schemas")
     detail.add_argument("--schema-depth", type=int, default=4)
+    detail.add_argument("--lang", choices=SUPPORTED_LANGS, default="ru", help="Output language")
     detail.set_defaults(func=command_detail)
 
     tag = subparsers.add_parser("tag", help="List endpoints for a tag")
     tag.add_argument("tag")
     tag.add_argument("--limit", type=int, default=100)
+    tag.add_argument("--lang", choices=SUPPORTED_LANGS, default="ru", help="Output language; tag matching checks both Russian and English")
     tag.set_defaults(func=command_tag)
 
     map_cmd = subparsers.add_parser("map", help="Print Swagger-file, tag, host, and category overview")
+    map_cmd.add_argument("--lang", choices=SUPPORTED_LANGS, default="ru", help="Output language")
     map_cmd.set_defaults(func=command_map)
 
     hosts = subparsers.add_parser("hosts", help="List hosts and observed x-category values")
+    hosts.add_argument("--lang", choices=SUPPORTED_LANGS, default="ru", help="Output language")
     hosts.set_defaults(func=command_hosts)
 
     protocol = subparsers.add_parser("protocol", help="Print Swagger-derived auth, host, token, ping, and status summary")
+    protocol.add_argument("--lang", choices=SUPPORTED_LANGS, default="ru", help="Output language")
     protocol.set_defaults(func=command_protocol)
 
-    generate = subparsers.add_parser("generate", help="Optionally generate browseable markdown from swagger/*.yaml")
+    generate = subparsers.add_parser("generate", help="Optionally generate browseable markdown from Swagger")
     generate.add_argument("--output", default="generated")
+    generate.add_argument("--lang", choices=SUPPORTED_LANGS, default="ru", help="Generated documentation language")
     generate.set_defaults(func=command_generate)
 
     validate = subparsers.add_parser("validate", help="Validate Swagger parsing, duplicate method/path pairs, and local $ref values")
     validate.add_argument("--generated", action="store_true", help="Also validate optional generated markdown output")
     validate.add_argument("--output", default="generated")
+    validate.add_argument("--lang", choices=SUPPORTED_LANGS, default="ru", help="Generated documentation language when using --generated")
     validate.set_defaults(func=command_validate)
     return parser
 

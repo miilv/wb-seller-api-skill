@@ -5,7 +5,7 @@ description: Swagger-backed Wildberries seller API reference for WB marketplace 
 
 # Wildberries API
 
-Treat `swagger/*.yaml` as the only API source of truth. Use the helper script for compact Swagger-derived lookups; do not load full Swagger files unless the helper output is insufficient.
+Treat local Swagger as the only API source of truth. Russian files in `swagger/*.yaml` are canonical; English files in `swagger/en/*.yaml` are a validated translation overlay for English search and text labels. Use the helper script for compact Swagger-derived lookups; do not load full Swagger files unless the helper output is insufficient.
 
 ## Default Workflow
 
@@ -13,14 +13,15 @@ The helper requires PyYAML. If it is missing, install dependencies with `python3
 
 1. Start with the compact Swagger query script:
    - Get an overview: `python3 scripts/wb_api.py map`
-   - Search endpoints: `python3 scripts/wb_api.py search "<query>" --limit 25`
+   - Search endpoints in Russian or English: `python3 scripts/wb_api.py search "<query>" --limit 25`
    - Inspect an exact endpoint: `python3 scripts/wb_api.py detail <METHOD> <PATH>`
    - Expand request/response fields: `python3 scripts/wb_api.py detail <METHOD> <PATH> --schemas`
    - Inspect auth, hosts, token hints, ping, and status codes: `python3 scripts/wb_api.py protocol`
    - List observed hosts/categories only: `python3 scripts/wb_api.py hosts`
+   - Add `--lang en` when English terminal labels are more useful; exact schemas, parameters, request bodies, and responses still come from canonical Russian Swagger.
 2. Open raw `swagger/*.yaml` only when the script output is insufficient for exact schemas, nested examples, enum values, or long endpoint descriptions.
 3. If human-readable browse docs are needed, generate them on demand with `python3 scripts/wb_api.py generate`; generated output is ignored by git.
-4. Validate parser coverage before relying on output: `python3 scripts/wb_api.py validate`.
+4. Validate parser coverage and the Russian/English mirror before relying on output: `python3 scripts/wb_api.py validate`.
 
 ## Answering Rules
 
