@@ -72,21 +72,25 @@ A `409` response typically counts as **10 requests** toward the limit.
 
 ## API Categories Quick Reference
 
-Each category's full endpoint reference is in a separate file. Read the relevant file when you need detailed endpoint information:
+The full endpoint reference is generated from the official OpenAPI specs at https://dev.wildberries.ru/openapi/. There are **287 endpoints** across **13 categories**:
 
-- **Content** (product cards, categories, media, tags): [references/content.md](references/content.md)
-- **Prices and Discounts**: [references/prices.md](references/prices.md)
-- **Marketplace** (seller warehouses, inventory): [references/marketplace.md](references/marketplace.md)
+- **General** (news, seller info, ping, common methods): [references/general.md](references/general.md)
+- **Products** (product cards, categories, media, tags, prices, discounts, content): [references/products.md](references/products.md)
 - **FBS Orders** (fulfillment by seller): [references/orders-fbs.md](references/orders-fbs.md)
+- **DBW Orders** (delivery by Wildberries): [references/orders-dbw.md](references/orders-dbw.md)
 - **DBS Orders** (delivery by seller): [references/orders-dbs.md](references/orders-dbs.md)
 - **In-Store Pickup Orders**: [references/in-store-pickup.md](references/in-store-pickup.md)
-- **FBW Supplies** (fulfillment by Wildberries): [references/supplies-fbw.md](references/supplies-fbw.md)
-- **Analytics** (sales funnel, search, stocks): [references/analytics.md](references/analytics.md)
-- **Reports** (statistics, warehouses, retention): [references/reports.md](references/reports.md)
-- **Promotion** (ad campaigns, media, search clusters): [references/promotion.md](references/promotion.md)
-- **Feedbacks, Questions, Buyers Chat, Returns**: [references/communication.md](references/communication.md)
-- **Finance and Documents**: [references/finance-documents.md](references/finance-documents.md)
-- **User Management**: [references/users.md](references/users.md)
+- **FBW Supplies** (fulfillment by Wildberries): [references/orders-fbw.md](references/orders-fbw.md)
+- **Promotion** (ad campaigns, media, calendar, marketing): [references/promotion.md](references/promotion.md)
+- **Communications** (feedbacks, questions, buyer chat, reviews): [references/communications.md](references/communications.md)
+- **Tariffs** (commission, storage, return tariffs): [references/tariffs.md](references/tariffs.md)
+- **Analytics** (sales funnel, search queries, stocks, brands): [references/analytics.md](references/analytics.md)
+- **Reports** (statistics, warehouses, retention, returns): [references/reports.md](references/reports.md)
+- **Finances** (finance reports, documents, accounting): [references/finances.md](references/finances.md)
+
+For a complete table of all 287 endpoints, see [endpoints-index.md](endpoints-index.md).
+
+For the raw OpenAPI specs, see the [swagger/](swagger/) directory.
 
 ## Code Generation Guidelines
 
