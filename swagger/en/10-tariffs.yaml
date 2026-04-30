@@ -1,0 +1,1004 @@
+openapi: 3.0.0
+info:
+  title: Tariffs
+  version: tariffs
+  description: |
+    Management of tariff plans, calculation of delivery and return costs, and obtaining current tariffs.
+  x-file-name: tariffs
+security:
+  - HeaderApiKey: []
+tags:
+  - name: Commissions
+    description: ''
+  - name: Stock Tariffs
+    description: ''
+  - name: Supply Tariffs
+    description: ''
+  - name: Return Cost to Seller
+    description: ''
+paths:
+  /api/v1/tariffs/commission:
+    servers:
+      - url: https://common-api.wildberries.ru
+    get:
+      x-readonly-method: true
+      x-category: commonapi
+      summary: Product Category Commission
+      tags:
+        - Commissions
+      description: |
+        WB commission by parent categories of products according to sales model.
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account:
+
+
+        | Type | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- | --- |
+        | Personal | 1 min | 1 request | 1 min | 2 requests |
+        | Service | 1 min | 1 request | 1 min | 2 requests |
+        | Base | 1 h | 5 requests | 12 min | 1 request |
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Locale'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Commission'
+                  - $ref: '#/components/schemas/CommissionChina'
+                  - $ref: '#/components/schemas/CommissionTurkey'
+                  - $ref: '#/components/schemas/CommissionUzbekistan'
+                  - $ref: '#/components/schemas/CommissionUAE'
+              examples:
+                Commission:
+                  $ref: '#/components/examples/Commission'
+                CommissionChina:
+                  $ref: '#/components/examples/CommissionChina'
+                CommissionTurkey:
+                  $ref: '#/components/examples/CommissionTurkey'
+                CommissionUzbekistan:
+                  $ref: '#/components/examples/CommissionUzbekistan'
+                CommissionUAE:
+                  $ref: '#/components/examples/CommissionUAE'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+              example:
+                detail: 'parameter "locale" in query has an error: value is not one of the allowed values ["ru","en","zh"]'
+                origin: api-statistics
+                requestId: 102d2641a931c41bed60649d6c99d80a
+                title: Bad Request
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v1/tariffs/box:
+    servers:
+      - url: https://common-api.wildberries.ru
+    get:
+      x-readonly-method: true
+      x-category: commonapi
+      summary: Box Tariffs
+      tags:
+        - Stock Tariffs
+      description: |
+        For items inventory supplied to the warehouse in boxes, the method returns the [rates](https://seller.wildberries.ru/dynamic-product-categories):
+          - for delivery from warehouse or sorting center to the buyer
+          - for delivery from the buyer to the sorting center
+          - for storage on WB warehouse
+
+        <div class="description_important">
+          The rates for boxes match the <strong>Supersafe</strong> rates
+        </div>
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account:
+
+
+        | Type | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- | --- |
+        | Personal | 1 min | 60 requests | 1 s | 5 requests |
+        | Service | 1 min | 60 requests | 1 s | 5 requests |
+        | Base | 1 h | 1 request | 1 h | 1 request |
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Date'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TariffsBoxResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+              example:
+                detail: Invalid date param
+                origin: tariffs
+                requestId: 70da980b108e6f52ce7630921bd05b1a
+                title: Bad Request
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v1/tariffs/pallet:
+    servers:
+      - url: https://common-api.wildberries.ru
+    get:
+      x-readonly-method: true
+      x-category: commonapi
+      summary: Pallet Tariffs
+      tags:
+        - Stock Tariffs
+      description: |
+        For items supplied to the WB warehouse on pallets, the method returns the [cost](https://seller.wildberries.ru/dynamic-product-categories):
+          - of delivery from warehouse to the buyer
+          - of delivery from the buyer to warehouse
+          - of storage on WB warehouse
+
+        <div class="description_important">
+          The rates for pallets match the <strong>Piece pallet</strong> rates
+        </div>
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account:
+
+
+        | Type | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- | --- |
+        | Personal | 1 min | 60 requests | 1 s | 5 requests |
+        | Service | 1 min | 60 requests | 1 s | 5 requests |
+        | Base | 1 h | 1 request | 1 h | 1 request |
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Date'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TariffsPalletResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+              example:
+                detail: 'parameter "date" in query has an error: value is required but missing'
+                origin: tariffs
+                requestId: 7bc5c30d95933058d0e0bddc79b9da547
+                title: Bad Request
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/tariffs/v1/acceptance/coefficients:
+    servers:
+      - url: https://common-api.wildberries.ru
+    get:
+      x-readonly-method: true
+      x-category: commonapi
+      security:
+        - HeaderApiKey: []
+      tags:
+        - Supply Tariffs
+      summary: Supply Tariffs
+      description: |
+        The method returns the supply tariffs for specific warehouses for the next 14 days.
+
+        <div class="description_important">
+          Acceptance for delivery is only available with the following combination of field's values: <br> <code>coefficient</code> — <code>0</code> or <code>1</code> <br> and <code>allowUnload</code> — <code>true</code>
+        </div>
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account:
+
+
+        | Type | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- | --- |
+        | Personal | 1 min | 6 requests | 10 s | 6 requests |
+        | Service | 1 min | 6 requests | 10 s | 6 requests |
+        | Base | 1 h | 1 request | 1 h | 1 request |
+        </div>
+      parameters:
+        - name: warehouseIDs
+          in: query
+          description: Warehouse IDs.<br>By default, data for all warehouses is returned
+          schema:
+            type: string
+          example: 507,117501
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/models.AcceptanceCoefficient'
+              examples:
+                ResponseCoefficients:
+                  $ref: '#/components/examples/ResponseCoefficients'
+        '400':
+          description: Incorrect request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/models.ErrorModel'
+              examples:
+                BadWarehouseIDsParamNew:
+                  $ref: '#/components/examples/Response400CoefficientsNew'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          description: Access denied
+        '404':
+          description: Not found
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v1/tariffs/return:
+    servers:
+      - url: https://common-api.wildberries.ru
+    get:
+      x-readonly-method: true
+      x-category: commonapi
+      summary: Return Tariffs
+      tags:
+        - Return Cost to Seller
+      description: |
+        Returns [tariffs](https://seller.wildberries.ru/dynamic-product-categories/return-cost):
+          - on transfer from Wildberries warehouse or sorting center to the seller
+          - on transfer of returned products that were not picked up by seller
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account:
+
+
+        | Type | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- | --- |
+        | Personal | 1 min | 60 requests | 1 s | 5 requests |
+        | Service | 1 min | 60 requests | 1 s | 5 requests |
+        | Base | 1 h | 1 request | 1 h | 1 request |
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Date'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnTariffsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+              example:
+                detail: 'parameter "date" in query has an error: empty value is not allowed'
+                origin: tariffs
+                requestId: e8096bddcfe5e3ff75f1afd26755364c
+                title: Bad Request
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '429':
+          $ref: '#/components/responses/429'
+components:
+  examples:
+    ResponseCoefficients:
+      value:
+        - date: '2024-04-11T00:00:00Z'
+          coefficient: -1
+          warehouseID: 217081
+          warehouseName: Сц Брянск 2
+          allowUnload: false
+          boxTypeID: 6
+          storageCoef: null
+          deliveryCoef: null
+          deliveryBaseLiter: null
+          deliveryAdditionalLiter: null
+          storageBaseLiter: null
+          storageAdditionalLiter: null
+          isSortingCenter: true
+    Response400CoefficientsNew:
+      value:
+        status: 400
+        title: bad request
+        detail: Неверный формат warehouseIDs
+        requestId: a6bdc2a4d2fde51c2036fa8af2483886
+        origin: supply-api
+      description: The value of the parameter `warehouseIDs` is either not specified or specified incorrectly
+    Commission:
+      summary: Commission
+      description: Commission
+      value:
+        report:
+          - kgvpBooking: 14.5
+            kgvpMarketplace: 15.5
+            kgvpPickup: 14.5
+            kgvpSupplier: 12.5
+            kgvpSupplierExpress: 3
+            paidStorageKgvp: 15.5
+            parentID: 657
+            parentName: Бытовая техника
+            subjectID: 6461
+            subjectName: Оборудование зуботехническое
+    CommissionChina:
+      summary: CommissionChina
+      description: China commission
+      value:
+        report:
+          - kgvpChina: 15.5
+            parentID: 657
+            parentName: 国内设备
+            subjectID: 6461
+            subjectName: 牙齿矫正设备
+    CommissionTurkey:
+      summary: CommissionTurkey
+      description: Turkey commission
+      value:
+        report:
+          - kgvpTurkey: 15.5
+            parentID: 657
+            parentName: Home appliance
+            subjectID: 6461
+            subjectName: Dental equipment
+    CommissionUzbekistan:
+      summary: CommissionUzbekistan
+      description: Uzbekistan commission
+      value:
+        report:
+          - kgvpMarketplaceUz: 15.5
+            kgvpPaidStorageUz: 15.5
+            kgvpSupplierUz: 15.5
+            parentID: 657
+            parentName: Бытовая техника
+            subjectID: 6461
+            subjectName: Оборудование зуботехническое
+    CommissionUAE:
+      summary: CommissionUAE
+      description: UAE commission
+      value:
+        report:
+          - kgvpUAE: 15.5
+            parentID: 657
+            parentName: Home appliance
+            subjectID: 6461
+            subjectName: Dental equipment
+  securitySchemes:
+    HeaderApiKey:
+      type: apiKey
+      name: Authorization
+      in: header
+  parameters:
+    Date:
+      in: query
+      name: date
+      required: true
+      description: Date, YYYY-MM-DD
+      schema:
+        type: string
+    Locale:
+      name: locale
+      in: query
+      schema:
+        type: string
+        example: ru
+      description: |
+        Language of the `parentName` and `subjectName` response fields:
+          - `ru` — Russian
+          - `en` — English
+          - `zh` — Chinese
+  schemas:
+    models.TariffsBoxResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/models.WarehousesBoxRates'
+    models.WarehousesBoxRates:
+      type: object
+      properties:
+        dtNextBox:
+          type: string
+          description: Start date of next tariff
+          example: '2024-02-01'
+        dtTillMax:
+          type: string
+          description: End date of the last set tariff
+          example: '2024-03-31'
+        warehouseList:
+          type: array
+          items:
+            $ref: '#/components/schemas/models.WarehouseBoxRates'
+          nullable: true
+          description: Box tariffs grouped by Wildberries warehouses
+    models.WarehouseBoxRates:
+      type: object
+      properties:
+        boxDeliveryBase:
+          type: string
+          description: "Logistics of the\_first liter,\_₽"
+          example: '48'
+        boxDeliveryCoefExpr:
+          type: string
+          description: "Coefficient **Logistics**,\_%. The logistics cost is multiplied by it. Already included in the tariffs"
+          example: '160'
+        boxDeliveryLiter:
+          type: string
+          description: "Logistics of every next liter,\_₽"
+          example: 11,2
+        boxDeliveryMarketplaceBase:
+          type: string
+          description: "FBS logistics of the\_first liter,\_₽"
+          example: '40'
+        boxDeliveryMarketplaceCoefExpr:
+          type: string
+          description: "Coefficient **FBS**,\_%. The FBS logistics cost is multiplied by it. Already included in the tariffs"
+          example: '125'
+        boxDeliveryMarketplaceLiter:
+          type: string
+          description: "FBS logistics of every next liter,\_₽"
+          example: '11'
+        boxStorageBase:
+          type: string
+          description: "Storage of the first liter per day,\_₽"
+          example: 0,14
+        boxStorageCoefExpr:
+          type: string
+          description: "Coefficient **Storage**,\_%. The storage cost is multiplied by it. Already included in the tariffs"
+          example: '115'
+        boxStorageLiter:
+          type: string
+          description: "Storage of every next liter per day,\_₽"
+          example: 0,07
+        geoName:
+          type: string
+          description: "Country, for Russian Federation\_—\_federal district"
+          example: Центральный федеральный округ
+        warehouseName:
+          type: string
+          description: Warehouse name
+          example: Коледино
+    models.TariffsPalletResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/models.WarehousesPalletRates'
+    models.WarehousesPalletRates:
+      type: object
+      properties:
+        dtNextPallet:
+          type: string
+          description: Start date of next tariff
+          example: '2024-02-01'
+        dtTillMax:
+          type: string
+          description: End date of the last set tariff
+          example: '2024-03-31'
+        warehouseList:
+          type: array
+          items:
+            $ref: '#/components/schemas/models.WarehousePalletRates'
+          nullable: true
+          description: Pallet tariffs grouped by Wildberries warehouses
+    models.WarehousePalletRates:
+      type: object
+      properties:
+        palletDeliveryExpr:
+          type: string
+          description: Delivery coefficient, %. The delivery cost is multiplied by it. All prices contain final data, with this coefficient
+          example: '170'
+        palletDeliveryValueBase:
+          type: string
+          description: "Delivery of 1\_liter,\_₽"
+          example: '51'
+        palletDeliveryValueLiter:
+          type: string
+          description: "Delivery of each next liter,\_₽"
+          example: 11,9
+        palletStorageExpr:
+          type: string
+          description: Storage coefficient, %. The storage cost is multiplied by it. All prices contain final data, with this coefficient
+          example: '155'
+        palletStorageValueExpr:
+          type: string
+          description: "Storage of one pallet,\_₽"
+          example: '35.65'
+        warehouseName:
+          type: string
+          description: Warehouse
+          example: Коледино
+    models.ReturnTariffsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/models.WarehousesReturnRates'
+    models.WarehousesReturnRates:
+      type: object
+      properties:
+        dtNextDeliveryDumpKgt:
+          type: string
+          description: Start date of next tariff, for delivery of large-sized products
+          example: '2024-02-01'
+        dtNextDeliveryDumpSrg:
+          type: string
+          description: Start date of next tariff, for delivery of unknown products
+          example: '2024-02-01'
+        dtNextDeliveryDumpSup:
+          type: string
+          description: Start date of next tariff, for common delivery
+          example: '2024-02-01'
+        warehouseList:
+          type: array
+          items:
+            $ref: '#/components/schemas/models.WarehouseReturnRates'
+          nullable: true
+          description: |
+            Return rates grouped by warehouses:
+              - cost of returning defective products and returns initiated by the seller for freight delivery.
+              - cost of returning products unidentified by the warehouse.
+              - cost of returning defective products, returns initiated by the seller, and auto-returns by the Marketplace (to the pickup point and back).
+
+             You can get the cost of returns to the pickup point and reverse logistics if the seller did not collect the products from the pickup point within 7 days.
+    models.WarehouseReturnRates:
+      type: object
+      properties:
+        deliveryDumpKgtOfficeBase:
+          type: string
+          description: |
+            **Return to the pick-up point, per 1 liter, ₽**
+            Used  for large-sized products, when:
+              - the seller takes products out from Wildberries warehouse,
+              - defective products was found on the warehouse,
+              - buyer returns products but we can not sell them again.
+          example: 1 039
+        deliveryDumpKgtOfficeLiter:
+          type: string
+          description: |
+            **Return cost for freight delivery, delivery to the pickup point (additional liter), ₽** Cost per each additional liter.
+          example: 9,1
+        deliveryDumpKgtReturnExpr:
+          type: string
+          description: |
+            **Return cost for freight delivery, reverse logistics for unclaimed return, ₽** <br>Freight delivery of unclaimed return back to the Wildberries warehouse. Per 1 product.
+          example: 1 050
+        deliveryDumpSrgOfficeExpr:
+          type: string
+          description: |
+            **Return of unknown products to the pick-up point. Per one product, ₽**
+
+            Applies to products that could not be accepted at the warehouse.
+          example: '170'
+        deliveryDumpSrgReturnExpr:
+          type: string
+          description: |
+            **Return cost for products unidentified by the warehouse per unit, reverse logistics for unclaimed return, ₽**<br>Delivery of unclaimed return back to the Wildberries warehouse.
+          example: '170'
+        deliveryDumpSupCourierBase:
+          type: string
+          description: |
+            **Return cost, courier delivery (base price per one liter), ₽**
+
+            Applies when:
+            - the seller wants to remove products from the Wildberries warehouse
+            - defective products are found in the warehouse
+            - a customer returns an product, but it cannot be returned to sale
+            - auto-return of products sold under the Marketplace model is enabled
+          example: '229'
+        deliveryDumpSupCourierLiter:
+          type: string
+          description: |
+            **Return by courier, per each next liter, ₽**
+            <br>Cost per each additional liter.
+          example: 9,1
+        deliveryDumpSupOfficeBase:
+          type: string
+          description: |
+            **Common return in pick-up point, per one liter, ₽**
+
+            Applies when:
+            - the seller wants to remove products from the Wildberries warehouse
+            - defective products are found in the warehouse
+            - a customer returns an product, but it cannot be returned to sale
+            - auto-return of products sold under the Marketplace model is enabled
+          example: '129'
+        deliveryDumpSupOfficeLiter:
+          type: string
+          description: |
+            **Common return in pick-up point, per each next liter, ₽**
+            <br>Cost per each additional liter.
+          example: 9,1
+        deliveryDumpSupReturnExpr:
+          type: string
+          description: |
+            **Return cost, reverse logistics for unclaimed return, per one product, ₽**<br>
+            Delivery of unclaimed return back to the Wildberries warehouse.
+
+            Applies when:
+            - the seller wants to remove products from the Wildberries warehouse
+            - defective products are found in the warehouse
+            - a customer returns an product, but it cannot be returned to sale
+            - auto-return of products sold under the Marketplace model is enabled
+          example: '250'
+        warehouseName:
+          type: string
+          description: Warehouse
+          example: Электросталь
+    models.ErrorModel:
+      type: object
+      properties:
+        status:
+          type: integer
+          description: HTTP status code
+        title:
+          type: string
+          description: Error ID
+        detail:
+          type: string
+          description: Error description
+        requestId:
+          type: string
+          description: Request ID
+        origin:
+          type: string
+          description: Service that returned the error
+    models.AcceptanceCoefficient:
+      type: object
+      properties:
+        date:
+          type: string
+          description: Start date of the coefficient
+        coefficient:
+          type: number
+          description: |
+            Acceptance coefficient:
+              - `-1` — acceptance is not available, regardless of the value of the field `allowUnload`
+              - `0` — free acceptance
+              - from `1` — acceptance cost multiplier
+        warehouseID:
+          type: integer
+          description: Warehouse ID. Use it to get [information about the warehouse](./orders-fbw#tag/Information-for-Forming-Supplies/paths/~1api~1v1~1warehouses/get)
+        warehouseName:
+          type: string
+          description: Warehouse name
+        allowUnload:
+          type: boolean
+          description: |
+            Availability of acceptance for deliveries of this type, see the value of the field `boxTypeID`:
+             - `true` — available
+             - `false` — not available
+        boxTypeID:
+          type: integer
+          description: |
+            Supply type ID:
+              - `2` — Box
+              - `5` — Monopallets
+              - `6` — Super safe
+            <br>For the **QR-delivery with boxes** supply type the field is not returned
+        storageCoef:
+          type: string
+          nullable: true
+          description: Storage coefficient
+        deliveryCoef:
+          type: string
+          nullable: true
+          description: Logistic coefficient
+        deliveryBaseLiter:
+          type: string
+          nullable: true
+          description: Cost of logistic for the first liter
+        deliveryAdditionalLiter:
+          type: string
+          nullable: true
+          description: Cost of logistic for each additional liter
+        storageBaseLiter:
+          type: string
+          nullable: true
+          description: |
+            Storage cost:
+              - for pallets — cost per pallet
+              - for boxes — storage cost for the first liter
+        storageAdditionalLiter:
+          type: string
+          nullable: true
+          description: |
+            Storage cost for each additional liter:
+              - for pallets — will always be `null` since the storage cost per pallet is defined in `StorageBaseLiter`
+              - for boxes — storage cost for each additional liter
+        isSortingCenter:
+          type: boolean
+          description: |
+            Warehouse type: - `true` — a sorting center (SC) - `false` — regular
+    TariffsBoxResponse:
+      type: object
+      properties:
+        response:
+          $ref: '#/components/schemas/models.TariffsBoxResponse'
+    TariffsPalletResponse:
+      type: object
+      properties:
+        response:
+          $ref: '#/components/schemas/models.TariffsPalletResponse'
+    ReturnTariffsResponse:
+      type: object
+      properties:
+        response:
+          $ref: '#/components/schemas/models.ReturnTariffsResponse'
+    Commission:
+      additionalProperties: false
+      type: object
+      properties:
+        report:
+          type: array
+          description: Commissions list
+          items:
+            type: object
+            properties:
+              kgvpBooking:
+                type: number
+                description: Commission on the model «Booking», %
+              kgvpMarketplace:
+                type: number
+                description: Commission on the model `FBS`, %
+              kgvpPickup:
+                type: number
+                description: Commission on the model «In-store pickup» (`C&C`), %
+              kgvpSupplier:
+                type: number
+                description: Commission on the models `DBS` and `DBW`, %
+              kgvpSupplierExpress:
+                type: number
+                description: Commission on the model `EDBS`, %
+              paidStorageKgvp:
+                type: number
+                description: Commission on the model `FBW`, %
+              parentID:
+                type: integer
+                description: Parent category ID
+              parentName:
+                type: string
+                description: Parent category name
+              subjectID:
+                type: integer
+                description: Subject ID
+              subjectName:
+                type: string
+                description: Subject name
+    CommissionChina:
+      type: object
+      properties:
+        report:
+          type: array
+          description: Commissions list
+          items:
+            type: object
+            properties:
+              kgvpChina:
+                type: number
+                description: Commission for China sellers, %
+              parentID:
+                type: integer
+                description: Parent category ID
+              parentName:
+                type: string
+                description: Parent category name
+              subjectID:
+                type: integer
+                description: Subject ID
+              subjectName:
+                type: string
+                description: Subject name
+    CommissionTurkey:
+      type: object
+      properties:
+        report:
+          type: array
+          description: Commissions list
+          items:
+            type: object
+            properties:
+              kgvpTurkey:
+                type: number
+                description: Commission for Turkey sellers, %
+              parentID:
+                type: integer
+                description: Parent category ID
+              parentName:
+                type: string
+                description: Parent category name
+              subjectID:
+                type: integer
+                description: Subject ID
+              subjectName:
+                type: string
+                description: Subject name
+    CommissionUzbekistan:
+      type: object
+      properties:
+        report:
+          type: array
+          description: Commissions list
+          items:
+            type: object
+            properties:
+              kgvpMarketplaceUz:
+                type: number
+                description: Commission on the model `FBS`, %
+              kgvpPaidStorageUz:
+                type: number
+                description: Commission on the model `FBW`, %
+              kgvpSupplierUz:
+                type: number
+                description: Commission on the model `DBS`, %
+              parentID:
+                type: integer
+                description: Parent category ID
+              parentName:
+                type: string
+                description: Parent category name
+              subjectID:
+                type: integer
+                description: Subject ID
+              subjectName:
+                type: string
+                description: Subject name
+    CommissionUAE:
+      type: object
+      properties:
+        report:
+          type: array
+          description: Commissions list
+          items:
+            type: object
+            properties:
+              kgvpUAE:
+                type: number
+                description: Commission for UAE sellers, %
+              parentID:
+                type: integer
+                description: Parent category ID
+              parentName:
+                type: string
+                description: Parent category name
+              subjectID:
+                type: integer
+                description: Subject ID
+              subjectName:
+                type: string
+                description: Subject name
+    BadRequest:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Error details
+        origin:
+          type: string
+          description: WB internal service ID
+        requestId:
+          type: string
+          description: Unique request ID
+        title:
+          type: string
+          description: Error title
+  responses:
+    '401':
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                description: Error title
+              detail:
+                type: string
+                description: Error details
+              code:
+                type: string
+                description: Internal error code
+              requestId:
+                type: string
+                description: Unique request ID
+              origin:
+                type: string
+                description: WB internal service ID
+              status:
+                type: number
+                description: HTTP status code
+              statusText:
+                type: string
+                description: Text of the HTTP status code
+              timestamp:
+                type: string
+                format: date-time
+                description: Request date and time
+          example:
+            title: unauthorized
+            detail: 'token problem; token is malformed: could not base64 decode signature: illegal base64 data at input byte 84'
+            code: 07e4668e--a53a3d31f8b0-[UK-oWaVDUqNrKG]; 03bce=277; 84bd353bf-75
+            requestId: 7b80742415072fe8b6b7f7761f1d1211
+            origin: s2s-api-auth-catalog
+            status: 401
+            statusText: Unauthorized
+            timestamp: '2024-09-30T06:52:38Z'
+    '402':
+      description: Payment required
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                description: Error title
+              detail:
+                type: string
+                description: Error details. The error is only returned to services from the [Solutions for business Catalog](https://dev.wildberries.ru/business-solutions)
+          example:
+            title: payment required
+            detail: wb solution for business has insufficient funds on its balance. please top up the balance in the company's personal account https://dev.wildberries.ru/company
+    '429':
+      description: Too many requests
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                description: Error title
+              detail:
+                type: string
+                description: Error details
+              code:
+                type: string
+                description: Internal error code
+              requestId:
+                type: string
+                description: Unique request ID
+              origin:
+                type: string
+                description: WB internal service ID
+              status:
+                type: number
+                description: HTTP status code
+              statusText:
+                type: string
+                description: Text of the HTTP status code
+              timestamp:
+                type: string
+                format: date-time
+                description: Request date and time
+          example:
+            title: too many requests
+            detail: limited by c122a060-a7fb-4bb4-abb0-32fd4e18d489
+            code: 07e4668e-ac2242c5c8c5-[UK-4dx7JUdskGZ]
+            requestId: 9d3c02cc698f8b041c661a7c28bed293
+            origin: s2s-api-auth-catalog
+            status: 429
+            statusText: Too Many Requests
+            timestamp: '2024-09-30T06:52:38Z'

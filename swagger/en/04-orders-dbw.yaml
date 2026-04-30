@@ -1,0 +1,2132 @@
+openapi: 3.0.1
+info:
+  title: DBW Orders
+  version: ordersdbw
+  description: |
+    Use DBW (Delivery by WB Courier) Orders methods to:
+      - get [assembly orders](/openapi/orders-dbw#tag/DBW-Assembly-Orders) information, manage statuses, and cancel assembly orders
+      - get, add, edit, and delete [metadata](/openapi/orders-dbw#tag/DBW-Metadata) for assembly orders
+  x-file-name: orders-dbw
+security:
+  - HeaderApiKey: []
+tags:
+  - name: DBW Assembly Orders
+    description: ''
+  - name: DBW Metadata
+    description: ''
+paths:
+  /api/v3/dbw/orders/new:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    get:
+      x-readonly-method: true
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Assembly Orders
+      summary: Get New Orders
+      description: |
+        Returns a list of all new [orders](/openapi/orders-dbw#tag/DBW-Assembly-Orders).
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a>  per one seller's account for DBW methods:
+        <ul>
+            <li>for getting and updating contact lists</li>
+            <li>for getting and deleting metadata</li>
+            <li>assembly orders</li>
+        </ul>
+
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 300 requests | 200 ms | 20 requests |
+
+        </div>
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                nullable: false
+                properties:
+                  orders:
+                    type: array
+                    nullable: false
+                    description: New assembly orders list
+                    items:
+                      $ref: '#/components/schemas/OrderNewDBW'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    get:
+      x-readonly-method: true
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Assembly Orders
+      summary: Get Information on Completed Orders
+      description: |
+        Returns information on completed orders (either canceled or sold).
+        <br>
+        You can get data for a specified period, maximum of 30 calendar days per request.
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account for DBW methods:
+        <ul>
+            <li>for getting and updating contact lists</li>
+            <li>for getting and deleting metadata</li>
+            <li>assembly orders</li>
+        </ul>
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 300 requests | 200 ms | 20 requests |
+
+        One request with a response code of <code>409</code> is counted as 10 requests
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Next'
+        - name: dateFrom
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: |
+            Period start date in Unix timestamp format
+        - name: dateTo
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Period end date in Unix timestamp format
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                nullable: false
+                properties:
+                  next:
+                    $ref: '#/components/schemas/Next'
+                  orders:
+                    type: array
+                    nullable: false
+                    items:
+                      $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders/delivery-date:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    post:
+      x-readonly-method: true
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      summary: Delivery Date and Time
+      tags:
+        - DBW Assembly Orders
+      description: |
+        Method provides information about the delivery date and time selected by the buyer for orders.
+        <br>
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account for DBW methods:
+        <ul>
+            <li>for getting and updating contact lists</li>
+            <li>for getting and deleting metadata</li>
+            <li>assembly orders</li>
+        </ul>
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 300 requests | 200 ms | 20 requests |
+
+        One request with a response code of <code>409</code> is counted as 10 requests
+        </div>
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryDatesRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryDatesInfoResp'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectRequest:
+                  $ref: '#/components/examples/IncorrectRequest1'
+                IncorrectRequestBody:
+                  $ref: '#/components/examples/IncorrectRequestBody'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/marketplace/v3/dbw/orders/client:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    post:
+      x-readonly-method: true
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      summary: Buyer Information
+      tags:
+        - DBW Assembly Orders
+      description: |
+        The method returns buyers information by order IDs.
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account for DBW methods:
+        <ul>
+            <li>for getting and updating contact lists</li>
+            <li>for getting and deleting metadata</li>
+            <li>assembly orders</li>
+        </ul>
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 300 requests | 200 ms | 20 requests |
+
+        One request with a response code of <code>409</code> is counted as 10 requests
+        </div>
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrdersRequestAPI'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientInfoResp'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectRequest:
+                  $ref: '#/components/examples/IncorrectRequest1'
+                IncorrectRequestBody:
+                  $ref: '#/components/examples/IncorrectRequestBody'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders/status:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    post:
+      x-readonly-method: true
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Assembly Orders
+      summary: Get Orders Statuses
+      description: |
+        Returns the statuses of orders based on the provided list of assembly order IDs
+
+        `supplierStatus` is a status of an order. The trigger for its change is the action of the seller himself.<br>
+        Possible values for this field are:
+        | Status   | Description               | How to move an order to this status   |
+        | -------  | ---------                 | --------------------------------------|
+        | `new`      | **New order** | |
+        | `confirm`  | **Order on assembly**      |  [Transfer to assembly](/openapi/orders-dbw#tag/DBW-Assembly-Orders/paths/~1api~1v3~1dbw~1orders~1%7BorderId%7D~1confirm/patch)
+        | `complete`  | **Order on delivery**<br>    | [Transfer to delivery](/openapi/orders-dbw#tag/DBW-Assembly-Orders/paths/~1api~1v3~1dbw~1orders~1%7BorderId%7D~1assemble/patch)
+        | `receive`  | **Received by the buyer**<br>       | Changed by the courier
+        | `reject`   | **Declined upon receipt**<br>           |  Changed by the courier
+        | `cancel`   | **Canceled by the seller**   |  [Cancel the order](/openapi/orders-dbw#tag/DBW-Assembly-Orders/paths/~1api~1v3~1dbw~1orders~1%7BorderId%7D~1cancel/patch)
+        | `cancel_missed_call` | **Cancellation due to unreachable buyer** | The status changes automatically |
+
+        `wbStatus` is a status of an order on the Wildberries side.<br>
+        Possible values for this field are:
+        - `waiting` — order in work
+        - `sold` — the buyer got the order
+        - `canceled` — order canceled
+        - `canceled_by_client` — the buyer canceled the order
+        - `declined_by_client` — the buyer canceled the order in the first hour <br> Cancellation is available to the buyer in the first hour from the moment of order, if the order is not transferred to confirm status.
+        - `defect` — order canceled due to a defect
+        - `canceled_by_missed_call` — cancellation due to unreachable buyer
+        - `postponed_delivery` — courier delivery is postponed
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account for DBW methods:
+        <ul>
+            <li>for getting and updating contact lists</li>
+            <li>for getting and deleting metadata</li>
+            <li>assembly orders</li>
+        </ul>
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 300 requests | 200 ms | 20 requests |
+
+        One request with a response code of <code>409</code> is counted as 10 requests
+        </div>
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orders
+              properties:
+                orders:
+                  type: array
+                  minItems: 1
+                  maxItems: 1000
+                  description: Orders IDs list
+                  items:
+                    type: integer
+                    format: int64
+                    example: 5632423
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    nullable: false
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          format: int64
+                          nullable: false
+                          description: Assembly order ID
+                          example: 5632423
+                        supplierStatus:
+                          type: string
+                          nullable: false
+                          description: Assembly order status set by the seller
+                          example: new
+                        wbStatus:
+                          type: string
+                          nullable: false
+                          description: Order status in the WB systems
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+                IncorrectRequestBody:
+                  $ref: '#/components/examples/IncorrectRequestBody'
+                IncorrectRequest:
+                  $ref: '#/components/examples/IncorrectRequest'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders/{orderId}/confirm:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    patch:
+      x-readonly-method: false
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Assembly Orders
+      summary: Transfer to Assembly
+      description: |
+        Transfers the assembly order to the `confirm` status — on assembly.
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account for DBW methods:
+        <ul>
+            <li>for getting and updating contact lists</li>
+            <li>for getting and deleting metadata</li>
+            <li>assembly orders</li>
+        </ul>
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 300 requests | 200 ms | 20 requests |
+
+        One request with a response code of <code>409</code> is counted as 10 requests
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Order'
+      responses:
+        '204':
+          description: Confirmed
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Error updating a status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                StatusMismatch:
+                  $ref: '#/components/examples/StatusMismatch'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders/stickers:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    post:
+      x-readonly-method: true
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Assembly Orders
+      summary: Get Orders Stickers
+      description: |
+        Returns a list of stickers for the [assembly orders](/openapi/orders-dbw#tag/DBW-Assembly-Orders/paths/~1api~1v3~1dbw~1orders~1new/get) in the [statuses](/openapi/orders-dbw#tag/DBW-Assembly-Orders/paths/~1api~1v3~1dbw~1orders~1status/post):
+          - `confirm` — on assembly
+          - `complete` — on delivery
+
+        You can get a maximum of 100 stickers per request.<br>
+        Available sticker formats:
+          - SVG
+          - ZPLV (vertical)
+          - ZPLH (horizontal)
+          - PNG
+
+        Available dimensions:
+          - 580x400 px, with `width=58&height=40` in request
+          - 400x300 px, with `width=40&height=30` in request
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account for DBW methods:
+        <ul>
+            <li>for getting and updating contact lists</li>
+            <li>for getting and deleting metadata</li>
+            <li>assembly orders</li>
+        </ul>
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 300 requests | 200 ms | 20 requests |
+
+        One request with a response code of <code>409</code> is counted as 10 requests
+        </div>
+      parameters:
+        - name: type
+          in: query
+          required: true
+          description: Sticker format
+          schema:
+            type: string
+            enum:
+              - svg
+              - zplv
+              - zplh
+              - png
+        - name: width
+          in: query
+          required: true
+          description: Sticker width
+          schema:
+            type: integer
+            enum:
+              - 58
+              - 40
+        - name: height
+          in: query
+          required: true
+          description: Sticker height
+          schema:
+            type: integer
+            enum:
+              - 40
+              - 30
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orders:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  description: Assembly order IDs list
+                  items:
+                    type: integer
+                    format: int64
+                    example: 5346346
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stickers:
+                    type: array
+                    nullable: false
+                    items:
+                      type: object
+                      properties:
+                        orderId:
+                          type: integer
+                          format: int64
+                          nullable: false
+                          description: Assembly order ID
+                          example: 5346346
+                        partA:
+                          type: string
+                          nullable: false
+                          description: The first part of the sticker ID for printing the signature
+                          example: '231648'
+                        partB:
+                          type: string
+                          nullable: false
+                          description: The second part of the sticker ID for printing the signature
+                          example: '97523'
+                        barcode:
+                          type: string
+                          nullable: false
+                          description: The encoded value of the sticker
+                          example: '!uKEtQZVx'
+                        file:
+                          type: string
+                          nullable: false
+                          description: Base64 encoded representation of the sticker in a requested format
+                          example: PD94bWwgdmVyc2lvbj0iMS4wIj8+CjwhLS0gR2VuZXJhdGVkIGJ5IFNWR28gLS0+Cjxzdmcgd2lkdGg9IjQwMCIgaGVpZ2h0PSIzMDAiCiAgICAgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogICAgIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIj4KPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjQwMCIgaGVpZQiIGhlaWdodD0iMTcwIiBzdHlsZT0iZmlsbDpibGFjayIgLz4KPHJlY3QgeD0iMzE4IiB5PSIyMCIgd2lkdGg9IjYiIGhlaWdodD0iMTcwIiBzdHlsZT0iZmlsbDpibGFjayIgLz4KPHJlY3QgeD0iMzI2IiB5PSIyMCIgd2lkdGg9IjIiIGhlaWdodD0iMTcwIiBzdHlsZT0iZmlsbDpibGFjayIgLz4KPHJlY3QgeD0iMzMwIiB5PSIyMCIgd2lkdGg9IjQiIGhlaWdodD0iMTcwIiBzdHlsZT0iZmlsbDpibGFjayIgLz4KPHJlY3QgeD0iMjAiIHk9IjIwMCIgd2lkdGg9IjM1MCIgaGVpZ2h0PSI5MCIgc3R5bGU9ImZpbGw6YmxhY2siIC8+Cjx0ZXh0IHg9IjMwIiB5PSIyNDAiIHN0eWxlPSJmaWxsOndoaXRlO2ZvbnQtc2l6ZTozMHB0O3RleHQtYW5jaG9yOnN0YXJ0IiA+MjMxNjQ4PC90ZXh0Pgo8dGV4dCB4PSIzNTAiIHk9IjI3MCIgc3R5bGU9ImZpbGw6d2hpdGU7Zm9udC1zaXplOjUwcHQ7dGV4dC1hbmNob3I6ZW5kIiA+OTc1MzwvdGV4dD4KPC9zdmc+Cg==
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectRequestBody:
+                  $ref: '#/components/examples/IncorrectRequestBody'
+                IncorrectRequest:
+                  $ref: '#/components/examples/IncorrectRequest'
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders/{orderId}/assemble:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    patch:
+      x-readonly-method: false
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Assembly Orders
+      summary: Transfer to Delivery
+      description: |
+        Transfers the [assembly order](/openapi/orders-dbw#tag/DBW-Assembly-Orders/paths/~1api~1v3~1dbw~1orders/get) to the [status](/openapi/orders-dbw#tag/DBW-Assembly-Orders/paths/~1api~1v3~1dbw~1orders~1status/post) `complete` — in delivery.
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account for DBW methods:
+        <ul>
+            <li>for getting and updating contact lists</li>
+            <li>for getting and deleting metadata</li>
+            <li>assembly orders</li>
+        </ul>
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 300 requests | 200 ms | 20 requests |
+
+        One request with a response code of <code>409</code> is counted as 10 requests
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Order'
+      responses:
+        '204':
+          description: Confirmed
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Error updating a status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                StatusMismatch:
+                  $ref: '#/components/examples/StatusMismatch'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders/courier:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    post:
+      x-readonly-method: true
+      x-category: marketplace
+      tags:
+        - DBW Assembly Orders
+      summary: Courier Info
+      description: |
+        Method provides the courier's contact information and vehicle number based on the assembly order ID. For assembly orders in the statuses `confirm` and `complete`.
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a>  per one seller's account for DBW methods:
+        <ul>
+            <li>for getting and updating contact lists</li>
+            <li>for getting and deleting metadata</li>
+            <li>assembly orders</li>
+        </ul>
+
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 300 requests | 200 ms | 20 requests |
+
+        </div>
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrdersRequestAPI'
+        required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCourierInfoResp'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+                IncorrectRequestBody:
+                  $ref: '#/components/examples/IncorrectRequestBody'
+                IncorrectRequest:
+                  $ref: '#/components/examples/IncorrectRequest'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders/{orderId}/cancel:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    patch:
+      x-readonly-method: false
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Assembly Orders
+      summary: Cancel the Order
+      description: |
+        Moves the assembly order to `cancel` status — canceled by the seller.
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account for the DBW methods:
+        <ul>
+            <li>for getting and updating contact lists</li>
+            <li>for getting and deleting metadata</li>
+            <li>for managing assembly orders</li>
+        </ul>
+
+
+        | Type | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- | --- |
+        | Personal | 1 min | 300 requests | 200 ms | 20 requests |
+        | Service | 1 min | 300 requests | 200 ms | 20 requests |
+        | Base | 1 h | 10 requests | 6 min | 1 request |
+
+        One request with a response code of <code>409</code> is counted as 10 requests
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Order'
+      responses:
+        '204':
+          description: Canceled
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Error updating a status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                StatusMismatch:
+                  $ref: '#/components/examples/StatusMismatch'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/marketplace/v3/dbw/orders/meta/details:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    post:
+      x-readonly-method: true
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Metadata
+      summary: Get Order Metadata
+      description: |
+        Returns [assembly orders](/openapi/orders-dbw#tag/DBW-Assembly-Orders) metadata and their validation statuses.
+        <br><br>
+        The list of metadata available for the assembly order can be obtained in the [list of new assembly orders](/openapi/orders-dbw#tag/DBW-Assembly-Orders/paths/~1api~1v3~1dbw~1orders~1new/get), field `requiredMeta`.
+        <br><br>
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a>  per one seller's account for DBW methods:
+        <ul>
+            <li>for getting and updating contact lists</li>
+            <li>for getting and deleting metadata</li>
+            <li>assembly orders</li>
+        </ul>
+
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 300 requests | 200 ms | 20 requests |
+
+        </div>
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/api.OrdersRequestV2'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.OrdersMetaDetailsResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.BatchError'
+              example:
+                detail: {}
+                origin: dbs-public-api
+                requestId: f1787bd2d1fdс35d6f537316514у4a05
+                title: IncorrectRequest
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/api.BatchError'
+              example:
+                detail: {}
+                origin: dbs-public-api
+                requestId: f1787bd2d1fdс35d6f537316514у4a05
+                title: AccessDenied
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders/{orderId}/meta:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    get:
+      x-readonly-method: true
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Metadata
+      summary: Get Order Metadata
+      deprecated: true
+      description: "This method is deprecated. It will be removed on\_[July 27](https://dev.wildberries.ru/en/release-notes?id=508)\n\n<div class=\"description_limit\">\n<a href=\"/openapi/api-information#tag/Introduction/Rate-Limits\">Request limit</a>  per one seller's account for DBW methods:\n<ul>\n    <li>for getting and updating contact lists</li>\n    <li>for getting and deleting metadata</li>\n    <li>assembly orders</li>\n</ul>\n\n\n| Period | Limit | Interval | Burst |\n| --- | --- | --- | --- |\n| 1 min | 300 requests | 200 ms | 20 requests |\n\n</div>\n"
+      parameters:
+        - $ref: '#/components/parameters/Order'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                nullable: false
+                properties:
+                  meta:
+                    $ref: '#/components/schemas/Meta'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/429'
+    delete:
+      x-readonly-method: false
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Metadata
+      summary: Delete Order Metadata
+      description: |
+        Removes all order metadata values for the passed key. Possible metadata is `imei`, `uin`, `gtin`, `sgtin`.
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a>  per one seller's account for DBW methods:
+        <ul>
+            <li>for getting and updating contact lists</li>
+            <li>for getting and deleting metadata</li>
+            <li>assembly orders</li>
+        </ul>
+
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 300 requests | 200 ms | 20 requests |
+
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Order'
+        - name: key
+          in: query
+          schema:
+            type: string
+          description: Name of metadata to delete (`imei`, `uin`, `gtin`, `sgtin`). Only one value is passed
+      responses:
+        '204':
+          description: Удалено
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+                IncorrectRequest:
+                  $ref: '#/components/examples/IncorrectRequest'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '409':
+          description: Ошибка удаления метаданных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                FailedToUpdateMeta:
+                  $ref: '#/components/examples/FailedToUpdateMeta'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders/{orderId}/meta/sgtin:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    put:
+      x-readonly-method: false
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Metadata
+      summary: Add Labeling Code Chestny ZNAK to the Order
+      description: |
+        This method allows you to assign a Data Matrix code (Chestny ZNAK marking) to an order. <br> The assignment of a Data Matrix code to an order is only possible if this field is returned in the response of the [Get order metadata](/openapi/orders-dbw#tag/DBW-Metadata/paths/~1api~1v3~1dbw~1orders~1%7BorderId%7D~1meta/get) method and the order is in the `confirm` status.
+
+        <br><br>You can get the uploaded labeling code [Chestny ZNAK](https://chestnyznak.ru/en) using the [Get order metadata](/openapi/orders-dbw#tag/DBW-Metadata/paths/~1api~1v3~1dbw~1orders~1%7BorderId%7D~1meta/get) method.
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account for all methods for <strong>adding DBW metadata</strong>:
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 1000 requests | 60 ms | 20 requests |
+
+        One request with a response code of <code>409</code> is counted as 10 requests
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Order'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sgtins:
+                  type: array
+                  description: List of labeling codes Chestny ZNAK
+                  minItems: 1
+                  maxItems: 24
+                  items:
+                    type: string
+                    description: Labeling code [Chestny ZNAK](https://chestnyznak.ru/en) on the package. From 16 to 135 characters
+                    example: '1234567890123456'
+      responses:
+        '204':
+          description: Отправлено
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectRequestBody:
+                  $ref: '#/components/examples/IncorrectRequestBody'
+                IncorrectRequest:
+                  $ref: '#/components/examples/IncorrectRequest'
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Metadata update error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                FailedToUpdateMeta:
+                  $ref: '#/components/examples/FailedToUpdateMeta'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders/{orderId}/meta/uin:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    put:
+      x-readonly-method: false
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Metadata
+      summary: Add UIN (Unique Identification Number) to the Order
+      description: |
+        Sets the UIN for the order. The order can only have one UIN. You can add the code only for orders in the `confirmed` status.
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account for all methods for <strong>adding DBW metadata</strong>:
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 1000 requests | 60 ms | 20 requests |
+
+        One request with a response code of <code>409</code> is counted as 10 requests
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Order'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                uin:
+                  type: string
+                  minLength: 16
+                  maxLength: 16
+                  description: UIN
+                  example: '1234567890123456'
+              required:
+                - uin
+      responses:
+        '204':
+          description: Updated
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectRequestBody:
+                  $ref: '#/components/examples/IncorrectRequestBody'
+                IncorrectRequest:
+                  $ref: '#/components/examples/IncorrectRequest'
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Metadata update error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                FailedToUpdateMeta:
+                  $ref: '#/components/examples/FailedToUpdateMeta'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders/{orderId}/meta/imei:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    put:
+      x-readonly-method: false
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Metadata
+      summary: Add IMEI to the Order
+      description: |
+        Sets the IMEI for the order. The order can have only one IMEI. You can add the code only for orders in the `confirmed` status.
+
+        <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account for all methods for <strong>adding DBW metadata</strong>:
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 1000 requests | 60 ms | 20 requests |
+
+        One request with a response code of <code>409</code> is counted as 10 requests
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Order'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imei:
+                  type: string
+                  minLength: 15
+                  maxLength: 15
+                  description: IMEI
+                  example: '123456789012345'
+              required:
+                - imei
+      responses:
+        '204':
+          description: Updated
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectRequestBody:
+                  $ref: '#/components/examples/IncorrectRequestBody'
+                IncorrectRequest:
+                  $ref: '#/components/examples/IncorrectRequest'
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Metadata update error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                FailedToUpdateMeta:
+                  $ref: '#/components/examples/FailedToUpdateMeta'
+        '429':
+          $ref: '#/components/responses/429'
+  /api/v3/dbw/orders/{orderId}/meta/gtin:
+    servers:
+      - url: https://marketplace-api.wildberries.ru
+    put:
+      x-readonly-method: false
+      x-category: marketplace
+      security:
+        - HeaderApiKey: []
+      tags:
+        - DBW Metadata
+      summary: Add GTIN to the Order
+      description: |
+        Sets the GTIN (Belarus product unique identifier) for the order. The order can only have one GTIN. You can add the code only for orders in the `confirmed` status.
+
+         <div class="description_limit">
+        <a href="/openapi/api-information#tag/Introduction/Rate-Limits">Request limit</a> per one seller's account for all methods for <strong>adding DBW metadata</strong>:
+
+        | Period | Limit | Interval | Burst |
+        | --- | --- | --- | --- |
+        | 1 min | 1000 requests | 60 ms | 20 requests |
+
+        One request with a response code of <code>409</code> is counted as 10 requests
+        </div>
+      parameters:
+        - $ref: '#/components/parameters/Order'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                gtin:
+                  type: string
+                  minLength: 13
+                  maxLength: 13
+                  description: GTIN
+                  example: '1234567890123'
+              required:
+                - gtin
+      responses:
+        '204':
+          description: Updated
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                IncorrectRequestBody:
+                  $ref: '#/components/examples/IncorrectRequestBody'
+                IncorrectRequest:
+                  $ref: '#/components/examples/IncorrectRequest'
+                IncorrectParameter:
+                  $ref: '#/components/examples/IncorrectParameter'
+        '401':
+          $ref: '#/components/responses/401'
+        '402':
+          $ref: '#/components/responses/402'
+        '403':
+          $ref: '#/components/responses/AccessDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Metadata update error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                FailedToUpdateMeta:
+                  $ref: '#/components/examples/FailedToUpdateMeta'
+        '429':
+          $ref: '#/components/responses/429'
+components:
+  securitySchemes:
+    HeaderApiKey:
+      type: apiKey
+      name: Authorization
+      in: header
+  parameters:
+    Order:
+      name: orderId
+      in: path
+      required: true
+      description: Assembly order ID
+      schema:
+        type: integer
+        format: int64
+        example: 5632423
+    Next:
+      name: next
+      in: query
+      required: true
+      schema:
+        type: integer
+        format: int64
+      description: Pagination parameter. Sets the value from which to retrieve the next batch. It should start at `0` to get the full list of data. For the subsequent requests, you must take the value from the `next` field in the response
+    Limit:
+      name: limit
+      in: query
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+      description: Pagination parameter. Sets the limit for the amount of data returned
+  examples:
+    IncorrectRequestBody:
+      description: Некорректное тело запроса
+      value:
+        message: ''
+    IncorrectRequest:
+      value:
+        message: ''
+    IncorrectRequest1:
+      description: Incorrect Request
+      value:
+        code: IncorrectRequest
+        message: ''
+    IncorrectParameter:
+      value:
+        code: IncorrectParameter
+        message: ''
+    FailedToUpdateMeta:
+      value:
+        code: FailedToUpdateMeta
+        message: ''
+    StatusMismatch:
+      value:
+        data: {}
+        code: StatusMismatch
+        message: ''
+  responses:
+    '401':
+      description: Unauthorized
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                description: Error title
+              detail:
+                type: string
+                description: Error details
+              code:
+                type: string
+                description: Internal error code
+              requestId:
+                type: string
+                description: Unique request ID
+              origin:
+                type: string
+                description: WB internal service ID
+              status:
+                type: number
+                description: HTTP status code
+              statusText:
+                type: string
+                description: Text of the HTTP status code
+              timestamp:
+                type: string
+                format: date-time
+                description: Request date and time
+          example:
+            title: unauthorized
+            detail: 'token problem; token is malformed: could not base64 decode signature: illegal base64 data at input byte 84'
+            code: 07e4668e--a53a3d31f8b0-[UK-oWaVDUqNrKG]; 03bce=277; 84bd353bf-75
+            requestId: 7b80742415072fe8b6b7f7761f1d1211
+            origin: s2s-api-auth-catalog
+            status: 401
+            statusText: Unauthorized
+            timestamp: '2024-09-30T06:52:38Z'
+    '402':
+      description: Payment required
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                description: Error title
+              detail:
+                type: string
+                description: Error details. The error is only returned to services from the [Solutions for business Catalog](https://dev.wildberries.ru/business-solutions)
+          example:
+            title: payment required
+            detail: wb solution for business has insufficient funds on its balance. please top up the balance in the company's personal account https://dev.wildberries.ru/company
+    '429':
+      description: Too many requests
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+                description: Error title
+              detail:
+                type: string
+                description: Error details
+              code:
+                type: string
+                description: Internal error code
+              requestId:
+                type: string
+                description: Unique request ID
+              origin:
+                type: string
+                description: WB internal service ID
+              status:
+                type: number
+                description: HTTP status code
+              statusText:
+                type: string
+                description: Text of the HTTP status code
+              timestamp:
+                type: string
+                format: date-time
+                description: Request date and time
+          example:
+            title: too many requests
+            detail: limited by c122a060-a7fb-4bb4-abb0-32fd4e18d489
+            code: 07e4668e-ac2242c5c8c5-[UK-4dx7JUdskGZ]
+            requestId: 9d3c02cc698f8b041c661a7c28bed293
+            origin: s2s-api-auth-catalog
+            status: 429
+            statusText: Too Many Requests
+            timestamp: '2024-09-30T06:52:38Z'
+    NotFound:
+      description: The resource is not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: NotFound
+            message: ''
+    AccessDenied:
+      description: Access denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: AccessDenied
+            message: ''
+  schemas:
+    ClientInfo:
+      properties:
+        replacementPhone:
+          type: string
+          description: |
+            Replacement phone number to contact the buyer. <br>
+            An empty value `""` means that the number is not assigned yet
+          example: '79871234567'
+          nullable: false
+        phone:
+          type: string
+          description: |
+            Buyer contact phone number:
+              - if the extension code is not specified in the `phoneCode` field, you can call the buyer using the specified number. Additional phone numbers that do not need extension codes are specified in the `additionalPhones` field
+              - if the extension code is specified in the `phoneCode` field, use it to reach the buyer via the specified number and extension code
+          example: '+79871234567'
+          nullable: false
+        firstName:
+          type: string
+          description: Buyer first name
+          example: Иван
+          nullable: false
+        fullName:
+          type: string
+          description: Buyer full name, used for documents
+          example: Иванов Иван Иванович
+          nullable: false
+        additionalPhones:
+          nullable: false
+          type: array
+          items:
+            type: string
+          description: |
+            Additional phone numbers to contact the buyer. <br>
+            Use it to call the buyer, if the main number from `phone` is unavailable.<br>
+            An empty value means that the number is not specified
+          example:
+            - '1234554321'
+        additionalPhoneCodes:
+          nullable: false
+          type: array
+          items:
+            type: integer
+          description: |
+            Additional extension codes. <br>
+            Use it if you could not reach the buyer using the extension code from `phoneCode`.<br>
+            An empty value means that the codes are not assigned yet
+          example:
+            - 12345
+        orderId:
+          type: integer
+          description: Assembly order ID
+          example: 1345678910
+        phoneCode:
+          type: integer
+          description: |
+            Extension phone code. <br>
+            Use it to reach the buyer via the number from `phone`.<br>
+            If the code is not specified, you can call the buyer without codes
+          example: 0
+          nullable: false
+      type: object
+    ClientInfoResp:
+      properties:
+        orders:
+          description: Buyers information
+          items:
+            $ref: '#/components/schemas/ClientInfo'
+          type: array
+      type: object
+    OrderCourierInfo:
+      type: object
+      properties:
+        courierInfo:
+          type: object
+          description: Courier info
+          allOf:
+            - $ref: '#/components/schemas/CourierInfo'
+        orderID:
+          type: integer
+          description: Assembly order ID
+          example: 2876979713
+    OrderCourierInfoResp:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderCourierInfo'
+    CourierContactsResponse:
+      type: object
+      properties:
+        carNumber:
+          type: string
+          description: Vehicle number
+          example: х111хх11
+        fullName:
+          type: string
+          description: Courier's full name
+          example: Иванов Иван Иванович
+        phone:
+          type: string
+          description: Phone number
+          example: '71230971931'
+        pTimeFrom:
+          type: string
+          format: date-time
+          description: Date and time from which the courier will arrive
+          nullable: true
+          example: '2025-09-06T08:00:00Z'
+        pTimeTo:
+          type: string
+          format: date-time
+          description: Date and time by which the courier will arrive
+          nullable: true
+          example: '2025-09-06T11:00:00Z'
+    CourierInfo:
+      type: object
+      properties:
+        contacts:
+          type: object
+          nullable: true
+          description: Courier contact information
+          allOf:
+            - $ref: '#/components/schemas/CourierContactsResponse'
+        mustBeAssigned:
+          type: boolean
+          description: |
+            If the the courier should be assigned by the current moment:
+             - `false` — no
+             - `true` — yes
+
+             If `"mustBeAssigned": true` and `"contacts": null`, then you need to request the contacts from [support](https://seller.wildberries.ru/service-desk-v2)
+        updatedAt:
+          type: string
+          format: date-time
+          description: Date and time of the courier information update. <br> If `null`, the information has not been updated
+          nullable: true
+          example: '2025-09-06T11:33:10+03:00'
+    api.OrdersMetaDetailsResponse:
+      type: object
+      required:
+        - requestId
+      properties:
+        requestId:
+          type: string
+          description: Unique request ID
+          example: f1787bd2d1fdс35d6f537316514у4a05
+        orders:
+          type: array
+          description: Assembly orders metadata and validation statuses
+          items:
+            type: object
+            required:
+              - isError
+            properties:
+              orderId:
+                type: integer
+                example: 123456
+                description: Assembly order ID
+              isError:
+                type: boolean
+                description: Are there any errors
+                example: false
+              errors:
+                type: array
+                example: []
+                description: Error data
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: integer
+                      description: Error code
+                      example: 404
+                    detail:
+                      type: string
+                      example: NotFound
+                      description: Additional error data
+              metaDetails:
+                type: array
+                description: Metadata and their validation statuses
+                items:
+                  type: object
+                  properties:
+                    key:
+                      type: string
+                      example: sgtin
+                      description: Metadata
+                    value:
+                      type: string
+                      nullable: true
+                      description: Metadata value
+                      example: '123456789012345'
+                    decision:
+                      type: string
+                      example: sgtinIntroduced
+                      description: |
+                        State:
+                        - `imei`
+                          - `pending` — Metadata for inspection
+                          - `optional` — Metadata is not required
+                          - `filled` — Validation passed
+                          - `deadlineExceeded` — Validation passed
+                          - `imeiMaySell` — The product is approved for sale. Validation passed
+                          - `imeiSoldB2B` — The product was sold to a B2B buyer and allowed to be sold again. Validation passed
+                          - `required` — Required metadata is not filled. Validation failed
+                          - `imeiInvalidFormat` — Invalid format. Validation failed
+                          - `imeiAlreadySold` — The item with this IMEI has already been sold. Validation failed
+                        - `uin`
+                          - `filled` — Validation passed
+                          - `optional` — Metadata is not required
+                        - `sgtin`
+                          - `pending` — Metadata for inspection
+                          - `optional` — Metadata is not required
+                          - `filled` — Validation passed
+                          - `deadlineExceeded` — Validation passed
+                          - `sgtinIntroduced` — The product is approved for sale. Validation passed
+                          - `sgtinSoldB2B` — The product was sold to a B2B buyer and allowed to be sold again. Validation passed
+                          - `required` — Required metadata is not filled. Validation failed
+                          - `sgtinInvalidFormat` — Invalid format. Validation failed
+                          - `sgtinNotFound` — Metadata not found in [Chestny ZNAK](https://chestnyznak.ru/en/). Validation failed
+                          - `sgtinEmitted` —  Metadata has been issued. Validation failed
+                          - `sgtinApplied` — Putting into circulation not completed. Validation failed
+                          - `sgtinWrittenOff` — Written off. Validation failed
+                          - `sgtinRetired` — Retired. Validation failed
+                          - `sgtinWithdrawn` — Withdrawn. Validation failed
+                          - `sgtinDisaggregation` — Disaggregation. Validation failed
+                          - `sgtinDisaggregated` — Disaggregated. Validation failed
+                          - `sgtinAppliedNotPaid` — Not paid. Validation failed
+                        - `gtin`
+                          - `optional` — Metadata is not required
+                          - `filled` — Validation passed
+                        - `customsDeclaration`
+                          - `optional` — Metadata is not required
+                          - `filled` — Validation passed
+    api.BatchError:
+      properties:
+        detail:
+          type: object
+          description: Error details
+          example: {}
+        origin:
+          type: string
+          description: WB internal service ID
+          example: dbs-public-api
+        requestId:
+          type: string
+          description: Unique request ID
+          example: f1787bd2d1fdс35d6f537316514у4a05
+        title:
+          type: string
+          description: Error title
+          example: IncorrectRequest
+      type: object
+    Error:
+      type: object
+      nullable: false
+      properties:
+        code:
+          type: string
+          description: Error code
+          nullable: false
+        message:
+          type: string
+          description: Error description
+          nullable: false
+        data:
+          type: object
+          description: Additional data for the error
+          nullable: true
+    OrdersRequestAPI:
+      properties:
+        orders:
+          description: Assembly order IDs list
+          items:
+            type: integer
+          type: array
+      type: object
+      example:
+        orders:
+          - 987654321
+          - 123456789
+    DeliveryDatesRequest:
+      properties:
+        orders:
+          description: Assembly order IDs list
+          items:
+            type: integer
+            minItems: 1
+            maxItems: 1000
+          type: array
+      type: object
+      example:
+        orders:
+          - 1234567890
+    Next:
+      type: integer
+      format: int64
+      nullable: false
+      description: Pagination parameter. Sets the value from which to retrieve the next batch
+      example: 13833711
+    OrderNewDBW:
+      type: object
+      properties:
+        address:
+          type: object
+          nullable: true
+          description: Address of the buyer for delivery
+          properties:
+            fullAddress:
+              description: Delivery address
+              type: string
+              example: Chelyabinsk Region, Chelyabinsk, 51st Arabkir Street, Building 10A, Apartment 42
+            longitude:
+              type: number
+              format: float64
+              nullable: false
+              description: Longitude
+              example: 44.519068
+            latitude:
+              type: number
+              format: float64
+              nullable: false
+              description: Latitude
+              example: 40.20192
+        salePrice:
+          description: |
+            Seller's price in the currency of sale, including seller's discount, except the WB Club discount, multiplied by 100
+          type: integer
+          nullable: true
+          example: 504600
+        requiredMeta:
+          description: List of metadata available for the assembly order. [Specifying the IMEI](./orders-dbw#tag/DBW-Metadata/paths/~1api~1v3~1dbw~1orders~1%7BorderId%7D~1meta~1imei/put) is required for `Smartphones` [subject](./work-with-products#tag/Categories-Subjects-and-Characteristics/paths/~1content~1v2~1object~1all/get), `"subjectId":515`
+          type: array
+          nullable: true
+          items:
+            type: string
+          example:
+            - uin
+        comment:
+          type: string
+          nullable: false
+          description: Buyer comment
+          maxLength: 300
+          example: Упакуйте в пленку, пожалуйста
+        options:
+          type: object
+          description: Order options
+          properties:
+            isB2b:
+              type: boolean
+              description: |
+                Indicator of a B2B sale:
+                  - `false` — not B2B sale
+                  - `true` — B2B sale
+        orderUid:
+          type: string
+          description: Transaction ID for order grouping. Orders in the same buyer's cart will have the same `orderUid`
+          example: 165918930_629fbc924b984618a44354475ca58675
+        groupId:
+          description: Assembly order group ID. <br> It unites assembly orders received at a single warehouse (`warehouseId`) as part of a single buyer transaction (`orderUid`)
+          type: string
+          format: UUID
+          example: 7a2c8810-1db2-4011-9682-5c7fa33afd83
+        article:
+          type: string
+          nullable: false
+          description: Seller's article
+          example: one-ring-7548
+        colorCode:
+          description: Color code (for tinted products only)
+          type: string
+          nullable: false
+          example: RAL 3017
+        rid:
+          type: string
+          nullable: false
+          description: |
+            Unique order ID. <br>
+            Note: `rid` corresponds to `srid` in the responses of the methods:
+              - [Buyers return applications](./user-communication#tag/Buyers-Returns/paths/~1api~1v1~1claims/get)
+              - [Orders](./reports#tag/Main-Reports/paths/~1api~1v1~1supplier~1orders/get)
+              - [Sales](./reports#tag/Main-Reports/paths/~1api~1v1~1supplier~1sales/get)
+              - [Goods Return Report](./reports#tag/Goods-Return-Report)
+              - [Realization sales report](./financial-reports-and-accounting#tag/Financial-Reports/paths/~1api~1v5~1supplier~1reportDetailByPeriod/get)
+          example: f884001e44e511edb8780242ac120002
+        createdAt:
+          type: string
+          format: date-time
+          nullable: false
+          description: Order creation date
+          example: '2022-05-04T07:56:29Z'
+        skus:
+          type: array
+          nullable: false
+          description: Product barcode array
+          items:
+            type: string
+            example: '6665956397512'
+        id:
+          type: integer
+          format: int64
+          nullable: false
+          description: Assembly order ID
+          example: 13833711
+        warehouseId:
+          type: integer
+          nullable: false
+          description: Seller's warehouse ID where the order was received
+          example: 658434
+        nmId:
+          type: integer
+          nullable: false
+          description: WB article
+          example: 123456789
+        chrtId:
+          type: integer
+          nullable: false
+          description: Product size ID in WB systems
+          example: 987654321
+        price:
+          type: integer
+          nullable: false
+          description: The price in the currency of sale including all discounts, except WB Wallet discount, multiplied by 100. You can find a currency code in the `currencyCode`. Provided for informational purposes only
+          example: 1014
+        convertedPrice:
+          type: integer
+          nullable: false
+          description: The price in the currency of the seller's country including all discounts, except WB Wallet discount, multiplied by 100. Provided for informational purposes only
+          example: 1014
+        currencyCode:
+          type: integer
+          nullable: false
+          format: ISO 4217
+          description: Sale currency code
+          example: 933
+        convertedCurrencyCode:
+          type: integer
+          nullable: false
+          format: ISO 4217
+          description: Currency code of the seller country
+          example: 643
+        cargoType:
+          type: integer
+          nullable: false
+          description: |
+            Type of cargo:
+              - `1` — small-sized goods
+              - `2` — over dimensional cargo (ODC)
+              - `3` — dimensional cargo+ (CD+)
+          enum:
+            - 1
+            - 2
+            - 3
+        isZeroOrder:
+          type: boolean
+          description: |
+            Indicator of an order for a product with zero inventory:
+              - `false` — the order is made for a product with a non-zero inventory
+              - `true` — the order is made for a product with zero inventory. Such an order can be canceled without a cancellation fee
+          example: false
+    Order:
+      type: object
+      properties:
+        address:
+          type: object
+          nullable: true
+          description: Address of the buyer for delivery
+          properties:
+            fullAddress:
+              description: Delivery address
+              type: string
+              example: Chelyabinsk Region, Chelyabinsk, 51st Arabkir Street, Building 10A, Apartment 42
+            longitude:
+              type: number
+              format: float64
+              nullable: false
+              description: Longitude
+              example: 44.519068
+            latitude:
+              type: number
+              format: float64
+              nullable: false
+              description: Latitude
+              example: 40.20192
+        options:
+          type: object
+          description: Order options
+          properties:
+            isB2b:
+              type: boolean
+              description: |
+                Indicator of a B2B sale:
+                  - `false` — not B2B sale
+                  - `true` — B2B sale
+        orderUid:
+          type: string
+          description: Transaction ID for order grouping. Orders in the same buyer's cart will have the same `orderUid`
+          example: 165918930_629fbc924b984618a44354475ca58675
+        groupId:
+          description: Assembly order group ID. <br> It unites assembly orders received at a single warehouse (`warehouseId`) as part of a single buyer transaction (`orderUid`)
+          type: string
+          format: UUID
+          example: 7a2c8810-1db2-4011-9682-5c7fa33afd83
+        article:
+          type: string
+          nullable: false
+          description: Seller's article
+          example: one-ring-7548
+        colorCode:
+          type: string
+          nullable: false
+          description: Color code (for tinted products only)
+          example: RAL 3017
+        rid:
+          type: string
+          nullable: false
+          description: |
+            Unique order ID. <br>
+            Note: `rid` corresponds to `srid` in the responses of the methods:
+              - [Buyers return applications](./user-communication#tag/Buyers-Returns/paths/~1api~1v1~1claims/get)
+              - [Orders](./reports#tag/Main-Reports/paths/~1api~1v1~1supplier~1orders/get)
+              - [Sales](./reports#tag/Main-Reports/paths/~1api~1v1~1supplier~1sales/get)
+              - [Goods Return Report](./reports#tag/Goods-Return-Report)
+              - [Realization sales report](./financial-reports-and-accounting#tag/Financial-Reports/paths/~1api~1v5~1supplier~1reportDetailByPeriod/get)
+          example: f884001e44e511edb8780242ac120002
+        createdAt:
+          type: string
+          format: date-time
+          nullable: false
+          description: Order creation date
+          example: '2022-05-04T07:56:29Z'
+        skus:
+          type: array
+          nullable: false
+          description: Product barcode array
+          items:
+            type: string
+            example: '6665956397512'
+        id:
+          type: integer
+          format: int64
+          nullable: false
+          description: Assembly order ID
+          example: 13833711
+        warehouseId:
+          type: integer
+          nullable: false
+          description: Seller's warehouse ID where the order was received
+          example: 658434
+        nmId:
+          type: integer
+          nullable: false
+          description: WB article
+          example: 123456789
+        chrtId:
+          type: integer
+          nullable: false
+          description: Product size ID in WB systems
+          example: 987654321
+        price:
+          type: integer
+          nullable: false
+          description: The price in the currency of sale including all discounts, except WB Wallet discount, multiplied by 100. You can find a currency code in the `currencyCode`. Provided for informational purposes only
+          example: 1014
+        convertedPrice:
+          type: integer
+          nullable: false
+          description: The price in the currency of the seller's country including all discounts, except WB Wallet discount, multiplied by 100. Provided for informational purposes only
+          example: 1014
+        currencyCode:
+          type: integer
+          nullable: false
+          format: ISO 4217
+          description: Sale currency code
+          example: 933
+        convertedCurrencyCode:
+          type: integer
+          nullable: false
+          format: ISO 4217
+          description: Currency code of the seller country
+          example: 643
+        cargoType:
+          type: integer
+          nullable: false
+          description: |
+            Type of cargo:
+              - `1` — small-sized goods
+              - `2` — over dimensional cargo (ODC)
+              - `3` — dimensional cargo+ (CD+)
+          enum:
+            - 1
+            - 2
+            - 3
+        comment:
+          type: string
+          nullable: false
+          description: Buyer comment
+          maxLength: 300
+          example: Упакуйте в пленку, пожалуйста
+        isZeroOrder:
+          type: boolean
+          description: |
+            Indicator of an order for a product with zero inventory:
+              - `false` — the order is made for a product with a non-zero inventory
+              - `true` — the order is made for a product with zero inventory. Such an order can be canceled without a cancellation fee
+          example: false
+    DeliveryDatesInfoResp:
+      type: object
+      properties:
+        orders:
+          type: array
+          items:
+            type: object
+            properties:
+              dTimeFrom:
+                type: string
+                nullable: true
+                description: Current delivery time "from"
+                example: '11:11'
+              dTimeTo:
+                type: string
+                nullable: true
+                description: Current delivery time "to"
+                example: '22:22'
+              dTimeFromOld:
+                type: string
+                nullable: true
+                description: Previous delivery time "from". Available only during the first day after the change
+                example: '12:30'
+              dTimeToOld:
+                type: string
+                nullable: true
+                description: Previous delivery time "to". Available only during the first day after the change
+                example: '22:30'
+              dDateOld:
+                type: string
+                nullable: true
+                description: Previous delivery date. Available only one day after the change
+                example: '2025-01-28'
+              dDate:
+                type: string
+                nullable: false
+                description: Current delivery date
+                example: '2025-02-20'
+              id:
+                type: integer
+                description: Assembly order ID
+                example: 1234567890
+    api.OrdersRequestV2:
+      type: object
+      properties:
+        ordersIds:
+          description: List of assembly order IDs
+          example:
+            - 123456
+            - 234567
+          maxItems: 1000
+          type: array
+          items:
+            type: integer
+    Meta:
+      type: object
+      description: Assembly order metadata
+      nullable: true
+      properties:
+        imei:
+          type: object
+          properties:
+            value:
+              nullable: true
+              type: string
+              example: '123456789012345'
+          description: IMEI
+        uin:
+          type: object
+          properties:
+            value:
+              nullable: true
+              type: string
+              example: '123456789012345'
+          description: UIN
+        gtin:
+          type: object
+          properties:
+            value:
+              nullable: true
+              type: string
+              example: '123456789012345'
+          description: GTIN
+        sgtin:
+          type: object
+          properties:
+            value:
+              type: array
+              items:
+                type: string
+              example:
+                - '123456789012345'
+              nullable: true
+          description: Labeling code [Chestny ZNAK](https://chestnyznak.ru/en)

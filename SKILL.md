@@ -1,116 +1,37 @@
 ---
 name: wildberries-api
-description: Wildberries seller API reference. Use when building integrations with Wildberries marketplace, writing code that calls WB API endpoints, debugging WB API issues, or when the user asks about Wildberries API capabilities, endpoints, authentication, or rate limits.
+description: Swagger-backed Wildberries seller API reference for WB marketplace integrations. Use when building or debugging code that calls Wildberries/WB seller API endpoints, choosing endpoints, checking request/response schemas, authentication headers, hosts, rate limits, or API capabilities.
 ---
 
 # Wildberries API
 
-The Wildberries API (WB API) provides sellers with tools to manage their store via HTTP REST API. It enables automation of store operations through integration with ERP, WMS, OMS, CRM systems.
+Treat `swagger/*.yaml` as the only API source of truth. Use the helper script for compact Swagger-derived lookups; do not load full Swagger files unless the helper output is insufficient.
 
-## Authentication
+## Default Workflow
 
-All requests require an API token in the `Authorization` header. Tokens are JWT (RFC 7519), valid for **180 days**.
+The helper requires PyYAML. If it is missing, install dependencies with `python3 -m pip install -r requirements.txt`.
 
-**Token types:**
-- **Personal access** (`acc:3`, `for:self`) -- full access, must not be shared with third parties
-- **Service** (`acc:4`) -- for a specific cloud service from WB's catalog
-- **Base** (`acc:1`) -- limited data access, for testing or fallback
-- **Test** (`acc:2`, `t:true`) -- sandbox only, generated test data
+1. Start with the compact Swagger query script:
+   - Get an overview: `python3 scripts/wb_api.py map`
+   - Search endpoints: `python3 scripts/wb_api.py search "<query>" --limit 25`
+   - Inspect an exact endpoint: `python3 scripts/wb_api.py detail <METHOD> <PATH>`
+   - Expand request/response fields: `python3 scripts/wb_api.py detail <METHOD> <PATH> --schemas`
+   - Inspect auth, hosts, token hints, ping, and status codes: `python3 scripts/wb_api.py protocol`
+   - List observed hosts/categories only: `python3 scripts/wb_api.py hosts`
+2. Open raw `swagger/*.yaml` only when the script output is insufficient for exact schemas, nested examples, enum values, or long endpoint descriptions.
+3. If human-readable browse docs are needed, generate them on demand with `python3 scripts/wb_api.py generate`; generated output is ignored by git.
+4. Validate parser coverage before relying on output: `python3 scripts/wb_api.py validate`.
 
-Each token has a bitmask field `s` controlling category access (Content, Analytics, Prices, Marketplace, Statistics, Promotion, Feedbacks, Buyers Chat, Supplies, Returns, Documents, Finance, Users).
+## Answering Rules
 
-## Base URLs by API Category
+- Cite method, path, host, source Swagger file, auth scheme, parameters/body, and relevant response codes.
+- Do not invent global protocol details. For rate limits, token types, sandbox behavior, or status meaning, use endpoint descriptions, `x-token-types`, `servers`, `securitySchemes`, and responses from Swagger.
+- Prefer compact script output over loading complete Swagger files into context.
+- If the local Swagger snapshot does not contain what the user expects, say that directly and ask before checking live docs.
 
-| Category | Production Base URL | Sandbox Base URL |
-|----------|-------------------|-----------------|
-| Common (News, Seller Info, Tariffs) | `common-api.wildberries.ru` | -- |
-| Content | `content-api.wildberries.ru` | `content-api-sandbox.wildberries.ru` |
-| Analytics | `seller-analytics-api.wildberries.ru` | -- |
-| Prices and Discounts | `discounts-prices-api.wildberries.ru` | `discounts-prices-api-sandbox.wildberries.ru` |
-| Marketplace (FBS/DBS/Pickup) | `marketplace-api.wildberries.ru` | -- |
-| Statistics | `statistics-api.wildberries.ru` | `statistics-api-sandbox.wildberries.ru` |
-| Promotion | `advert-api.wildberries.ru` | `advert-api-sandbox.wildberries.ru` |
-| Promotion (Media) | `advert-media-api.wildberries.ru` | -- |
-| Promotions Calendar | `dp-calendar-api.wildberries.ru` | -- |
-| Feedbacks and Questions | `feedbacks-api.wildberries.ru` | `feedbacks-api-sandbox.wildberries.ru` |
-| Buyers Chat | `buyer-chat-api.wildberries.ru` | -- |
-| Supplies (FBW) | `supplies-api.wildberries.ru` | -- |
-| Buyers Returns | `returns-api.wildberries.ru` | -- |
-| Documents | `documents-api.wildberries.ru` | -- |
-| Finance | `finance-api.wildberries.ru` | -- |
-| User Management | `user-management-api.wildberries.ru` | -- |
+## Code Generation Checklist
 
-## Rate Limiting
-
-Uses token bucket algorithm. Key headers:
-- `X-Ratelimit-Remaining` -- requests available without pause
-- `X-Ratelimit-Retry` -- seconds to wait after 429
-- `X-Ratelimit-Limit` -- max burst size
-- `X-Ratelimit-Reset` -- seconds until burst fully restores
-
-A `409` response typically counts as **10 requests** toward the limit.
-
-## HTTP Status Codes
-
-| Code | Meaning |
-|------|---------|
-| 200 | Success |
-| 204 | Deleted/Updated/Confirmed |
-| 400 | Bad request -- check syntax |
-| 401 | Unauthorized -- check token category, expiry |
-| 403 | Access denied -- token user deleted or method blocked |
-| 404 | Not found -- check URL |
-| 409 | Conflict -- check data requirements |
-| 413 | Request body too large -- reduce objects |
-| 422 | Unprocessable -- contradictory request data |
-| 429 | Rate limited -- wait per `X-Ratelimit-Retry` |
-| 5xx | Server error -- retry later |
-
-## Connection Test
-
-`GET https://{base-url}/ping` -- works with any token category. Max 3 requests per 30 seconds.
-
-## Documentation Files
-
-The full reference is generated from the official OpenAPI specs at https://dev.wildberries.ru/openapi/. **287 endpoints** across **13 categories**.
-
-For the **complete endpoint index** with all 287 endpoints, see:
-- [endpoints-index.md](endpoints-index.md) — quick lookup table of every endpoint
-
-For **endpoint listings per category** (lightweight: method, path, summary), see:
-- [references/general.md](references/general.md) — news, seller info, ping, common methods
-- [references/products.md](references/products.md) — product cards, categories, media, tags, prices, discounts, content
-- [references/orders-fbs.md](references/orders-fbs.md) — FBS orders (fulfillment by seller)
-- [references/orders-dbw.md](references/orders-dbw.md) — DBW orders (delivery by Wildberries)
-- [references/orders-dbs.md](references/orders-dbs.md) — DBS orders (delivery by seller)
-- [references/in-store-pickup.md](references/in-store-pickup.md) — in-store pickup orders
-- [references/orders-fbw.md](references/orders-fbw.md) — FBW supplies (fulfillment by Wildberries)
-- [references/promotion.md](references/promotion.md) — ad campaigns, media, calendar, marketing
-- [references/communications.md](references/communications.md) — feedbacks, questions, buyer chat, reviews
-- [references/tariffs.md](references/tariffs.md) — commission, storage, return tariffs
-- [references/analytics.md](references/analytics.md) — sales funnel, search queries, stocks, brands
-- [references/reports.md](references/reports.md) — statistics, warehouses, retention, returns
-- [references/finances.md](references/finances.md) — finance reports, documents, accounting
-
-For **full request/response schemas**, read the raw OpenAPI 3.0.1 YAMLs in [swagger/](swagger/) (one file per category, matches the references above 1-to-1).
-
-## How to Use This Skill
-
-1. When the user asks about a specific endpoint, look it up in `endpoints-index.md` first
-2. For a quick category overview, read the relevant `references/*.md`
-3. For detailed request/response schemas, read the corresponding `swagger/*.yaml`
-4. Always pass the token via `Authorization` header (not query params)
-5. Use the correct base URL for the API category (do not mix hosts)
-6. Generate working code examples in the user's preferred language
-
-## Code Generation Guidelines
-
-When writing code that interacts with WB API:
-
-1. Always pass the token via `Authorization` header (not query params)
-2. Respect rate limits -- implement exponential backoff on 429 responses, read `X-Ratelimit-Retry` header
-3. Use the correct base URL for the API category (do not mix hosts)
-4. Handle pagination where endpoints support `cursor`/`limit`/`offset` patterns
-5. For async reports (warehouse remains, paid storage, paid reception), use the create-task -> poll-status -> download pattern
-6. Token category in the JWT `s` bitmask must include the bit for the API category being accessed
-7. Sandbox endpoints use `-sandbox` suffix on the base domain where available
+- Read credentials from env/config; never hard-code the token.
+- Send the token using the Swagger-declared `HeaderApiKey` scheme (`Authorization` header).
+- Use the host declared on the operation or inherited by its path/spec.
+- Implement pagination, polling, retries, and payload validation only when the endpoint schema or description calls for it.
