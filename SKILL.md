@@ -70,27 +70,38 @@ A `409` response typically counts as **10 requests** toward the limit.
 
 `GET https://{base-url}/ping` -- works with any token category. Max 3 requests per 30 seconds.
 
-## API Categories Quick Reference
+## Documentation Files
 
-The full endpoint reference is generated from the official OpenAPI specs at https://dev.wildberries.ru/openapi/. There are **287 endpoints** across **13 categories**:
+The full reference is generated from the official OpenAPI specs at https://dev.wildberries.ru/openapi/. **287 endpoints** across **13 categories**.
 
-- **General** (news, seller info, ping, common methods): [references/general.md](references/general.md)
-- **Products** (product cards, categories, media, tags, prices, discounts, content): [references/products.md](references/products.md)
-- **FBS Orders** (fulfillment by seller): [references/orders-fbs.md](references/orders-fbs.md)
-- **DBW Orders** (delivery by Wildberries): [references/orders-dbw.md](references/orders-dbw.md)
-- **DBS Orders** (delivery by seller): [references/orders-dbs.md](references/orders-dbs.md)
-- **In-Store Pickup Orders**: [references/in-store-pickup.md](references/in-store-pickup.md)
-- **FBW Supplies** (fulfillment by Wildberries): [references/orders-fbw.md](references/orders-fbw.md)
-- **Promotion** (ad campaigns, media, calendar, marketing): [references/promotion.md](references/promotion.md)
-- **Communications** (feedbacks, questions, buyer chat, reviews): [references/communications.md](references/communications.md)
-- **Tariffs** (commission, storage, return tariffs): [references/tariffs.md](references/tariffs.md)
-- **Analytics** (sales funnel, search queries, stocks, brands): [references/analytics.md](references/analytics.md)
-- **Reports** (statistics, warehouses, retention, returns): [references/reports.md](references/reports.md)
-- **Finances** (finance reports, documents, accounting): [references/finances.md](references/finances.md)
+For the **complete endpoint index** with all 287 endpoints, see:
+- [endpoints-index.md](endpoints-index.md) — quick lookup table of every endpoint
 
-For a complete table of all 287 endpoints, see [endpoints-index.md](endpoints-index.md).
+For **endpoint listings per category** (lightweight: method, path, summary), see:
+- [references/general.md](references/general.md) — news, seller info, ping, common methods
+- [references/products.md](references/products.md) — product cards, categories, media, tags, prices, discounts, content
+- [references/orders-fbs.md](references/orders-fbs.md) — FBS orders (fulfillment by seller)
+- [references/orders-dbw.md](references/orders-dbw.md) — DBW orders (delivery by Wildberries)
+- [references/orders-dbs.md](references/orders-dbs.md) — DBS orders (delivery by seller)
+- [references/in-store-pickup.md](references/in-store-pickup.md) — in-store pickup orders
+- [references/orders-fbw.md](references/orders-fbw.md) — FBW supplies (fulfillment by Wildberries)
+- [references/promotion.md](references/promotion.md) — ad campaigns, media, calendar, marketing
+- [references/communications.md](references/communications.md) — feedbacks, questions, buyer chat, reviews
+- [references/tariffs.md](references/tariffs.md) — commission, storage, return tariffs
+- [references/analytics.md](references/analytics.md) — sales funnel, search queries, stocks, brands
+- [references/reports.md](references/reports.md) — statistics, warehouses, retention, returns
+- [references/finances.md](references/finances.md) — finance reports, documents, accounting
 
-For the raw OpenAPI specs, see the [swagger/](swagger/) directory.
+For **full request/response schemas**, read the raw OpenAPI 3.0.1 YAMLs in [swagger/](swagger/) (one file per category, matches the references above 1-to-1).
+
+## How to Use This Skill
+
+1. When the user asks about a specific endpoint, look it up in `endpoints-index.md` first
+2. For a quick category overview, read the relevant `references/*.md`
+3. For detailed request/response schemas, read the corresponding `swagger/*.yaml`
+4. Always pass the token via `Authorization` header (not query params)
+5. Use the correct base URL for the API category (do not mix hosts)
+6. Generate working code examples in the user's preferred language
 
 ## Code Generation Guidelines
 
